@@ -154,6 +154,9 @@ plot2 <- ggplot(data2) +
 
 ```
 
+For BRWa, the departures seem to be more synchronised than the arrivals, while it is the other way around for BBFl. But generally for both species, there seems to be a temporal lag of around a month between arrivals at the northernmost wintering grounds and at the southernmost ones.
+
+
 Ashwin's thoughts:
 - Distinguish between staying and passage using freq
 - I find it really interesting that Greenish Warblers that span multiple latitudes in the peninsula show synchronous arrival and departure. But in the extreme north, there may be passage movement. You can check this using the previous method. I also suggest that you exclude data from the Himalayan states and from West Bengal eastwards so that we can focus exclusively on subspecies viridanus that has an extralimital breeding range (and exclude the Himalayan breeding and NE wintering subspecies trochiloides/ludlowi). Is there still some sign of passage just south of the Himalayas and in the northern plains? I suspect it will continue to show signs of slow passage through that region.
