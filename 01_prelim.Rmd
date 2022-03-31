@@ -1,0 +1,159 @@
+---
+title: "Change in arrival and departure timings of migratory birds with wintering latitude"
+date: "2022/03/31"
+author: "Karthik Thrikkadeeri"
+editor_options: 
+  chunk_output_type: console
+bibliography: migration-timings-latitude.bib
+link-citations: yes
+output: 
+  html_document:
+    toc: true
+    toc_depth: 3  
+    number_sections: false  
+    theme: united  
+    highlight: tango  # specifies the syntax highlighting style
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(lubridate)
+library(patchwork)
+# library(boot)
+
+theme_set(theme_bw())
+
+# migration_palette <- c("#1B9E77", "#E89005", "#EF4050", "#9678B6")
+
+knitr::opts_chunk$set(echo = FALSE, warnings = FALSE, 
+                      messages = FALSE, cache.lazy = FALSE)
+
+```
+
+```{r data_filt, cache=TRUE}
+
+# datapath <- "data/"ebd_IN_relFeb-2022.RData""
+# 
+# source("scripts/functions.R")
+# # filtering the data for current use
+# dataqual_filt(datapath, groupaccspath, covidclasspath, 
+#               maxvel = 20, minsut = 2)
+
+
+
+
+
+# load("data/ebd_IN_relJan-2022.RData")
+# 
+# data0 <- data %>%
+#   filter(COMMON.NAME %in% c("Greenish Warbler", "Blyth's Reed Warbler",
+#                             "Brown-breasted Flycatcher")) %>%
+#   filter(YEAR > 2014)
+# 
+# met_week <- function(dates) {
+#   require(lubridate)
+#   normal_year <- c((0:363 %/% 7 + 1), 52)
+#   leap_year   <- c(normal_year[1:59], 9, normal_year[60:365])
+#   year_day    <- yday(dates)
+#   return(ifelse(leap_year(dates), leap_year[year_day], normal_year[year_day]))
+# }
+# 
+# data0 <- data0 %>%
+#   select(!c("LAST.EDITED.DATE", "BREEDING.CODE", "HAS.MEDIA", "APPROVED", "REVIEWED")) %>% 
+#   mutate(DAY.Y = yday(OBSERVATION.DATE),
+#          WEEK.Y = met_week(OBSERVATION.DATE),
+#          M.YEAR = if_else(DAY.Y <= 151, YEAR-1, YEAR), # from 1st June to 31st May
+#          WEEK.MY = if_else(WEEK.Y > 21, WEEK.Y-21, 52-(21-WEEK.Y)))  %>%
+#   group_by(GROUP.ID, COMMON.NAME) %>%
+#   slice(1) %>% ungroup() # removing dup. lists
+# 
+# save(data0, file = "data/data0.RData")
+
+load("data/data0.RData")
+
+```
+
+# Introduction
+
+***This notebook is the exploratory analysis notebook for the study. Here, I explore, mainly via visualisations, interesting patterns in arrival and departure times of some migratory bird species changing with their wintering latitudes.***
+
+## Questions
+
+# Exploration
+
+Below are explorations from before I joined BCI.
+
+## Plain visualisation of migration timings with latitudes 
+
+```{r 01_prelimvis, cache=TRUE, message=FALSE}
+
+data1 <- data0 %>% 
+  group_by(COMMON.NAME, LATITUDE, WEEK.MY) %>% 
+  summarise(N = n(), 
+            WEEK.Y = WEEK.Y) 
+
+# getting kernel density estimates (avoid overplotting)
+# creating a new data frame of 2d density grid
+# fitting a model
+# applying the model to the original data to estimate density at that point
+library(MASS)
+dens <- kde2d(data1$WEEK.MY, data1$LATITUDE)
+grid <- data.frame(with(dens, expand.grid(x,y)), as.vector(dens$z))
+names(grid) <- c("xgr", "ygr", "zgr")
+mod <- loess(zgr ~ xgr*ygr, data = grid, span = 0.5)
+
+data1 <- data1 %>% 
+  ungroup() %>% 
+  mutate(POINTDENS = predict(mod, newdata = data.frame(xgr = data1$WEEK.MY, 
+                                                       ygr = data1$LATITUDE)))
+
+rm(list = c("dens","grid","mod"))
+
+plot1 <- ggplot(data1, aes(WEEK.MY, LATITUDE, colour = POINTDENS)) + 
+  scale_x_continuous(breaks = (seq(0,52,4))) +
+  scale_y_continuous(breaks = (seq(0,40,5))) +
+  coord_trans(y = "log10") +
+  scale_colour_gradient(low = "#21421e", high = "#66b032") +
+  labs(title = "Reports of migrant species varying with weeks and latitude",
+       subtitle = "X-axis represents number of weeks starting from June to May") +
+  geom_jitter(size = 0.8) +
+  geom_vline(xintercept = 31) +
+  annotate("text", x = 29, y = 10, label = "Dec", angle = 90) +
+  annotate("text", x = 32, y = 10, label = "Jan", angle = 90) +
+  facet_wrap(~COMMON.NAME) 
+
+```
+
+## Investigating arrival and departure timings
+
+```{r 02_prelimvis, cache=TRUE, message=FALSE}
+
+data2 <- data0 %>% 
+  # 1 deg resolution
+  mutate(LATITUDE1 = round(LATITUDE, 0)) %>% # since 1deg ~ 100km
+  group_by(COMMON.NAME, LATITUDE1) %>% 
+  summarise(N = n(),
+            ARR = unname(quantile(WEEK.MY, probs = 0.025, type = 1)), 
+            DEP = unname(quantile(WEEK.MY, probs = 0.975, type = 1))) %>% 
+  pivot_longer(cols = ARR:DEP,
+               names_to = "DATE.TYPE", values_to = "WEEK") %>% 
+  mutate(DATE.TYPE = factor(DATE.TYPE, levels = c("DEP","ARR")))
+
+
+plot2 <- ggplot(data2) + 
+  theme(strip.placement = "outside") +
+  geom_point(aes(x = WEEK, y = LATITUDE1, colour = DATE.TYPE)) +
+  scale_colour_manual(values = c("#b22222","#006994")) +
+  geom_vline(aes(xintercept = 31)) +
+  geom_text(aes(x = 31, y = 10, label = "Dec"), nudge_x = -2, angle = 90) +
+  geom_text(aes(x = 31, y = 10, label = "Jan"), nudge_x = 1, angle = 90) +
+  facet_wrap(~COMMON.NAME) +
+  scale_y_continuous(breaks = (seq(0, 40, 5))) +
+  ggtitle("Variation of first arrival and last departure dates with latitude") 
+
+
+```
+
+Ashwin's thoughts:
+- Distinguish between staying and passage using freq
+- I find it really interesting that Greenish Warblers that span multiple latitudes in the peninsula show synchronous arrival and departure. But in the extreme north, there may be passage movement. You can check this using the previous method. I also suggest that you exclude data from the Himalayan states and from West Bengal eastwards so that we can focus exclusively on subspecies viridanus that has an extralimital breeding range (and exclude the Himalayan breeding and NE wintering subspecies trochiloides/ludlowi). Is there still some sign of passage just south of the Himalayas and in the northern plains? I suspect it will continue to show signs of slow passage through that region.

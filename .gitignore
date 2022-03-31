@@ -1,0 +1,25 @@
+.Rproj.user
+.Rhistory
+.Ruserdata
+
+*.RData
+*.Rproj
+
+# RDS file with login credentials
+*.rds
+
+# data files
+*.pdf
+*.txt
+*.zip
+
+# folders in repo
+bin/
+Literature/
+
+# RMD caches
+*_cache/
+*_files/
+
+
+
