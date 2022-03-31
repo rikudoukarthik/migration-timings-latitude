@@ -32,42 +32,32 @@ knitr::opts_chunk$set(echo = FALSE, warnings = FALSE,
 
 ```{r data_filt, cache=TRUE}
 
-# datapath <- "data/"ebd_IN_relFeb-2022.RData""
+# rawpath <- "data/ebd_IN_relFeb-2022.txt"
+# senspath <- "data/ebd_sensitive_relDec-2021_IN.txt"
 # 
 # source("scripts/functions.R")
-# # filtering the data for current use
-# dataqual_filt(datapath, groupaccspath, covidclasspath, 
-#               maxvel = 20, minsut = 2)
+
+# # processing the data for current use
+# data_process(rawpath, senspath)
+
+# # cleaning and filtering for data quality
+# dataqual_filt(datapath, groupaccspath, maxvel = 20, minsut = 2)
 
 
 
+### load("data/ebd_IN_relJan-2022.RData")
 
+data0 <- data %>% 
+  filter((CATEGORY == "species" & COMMON.NAME %in% c("Blyth's Reed Warbler", 
+                                                    "Brown-breasted Flycatcher", 
+                                                    "Greenish Warbler")) |
+           (CATEGORY == "issf" & str_detect(SUBSPECIES.COMMON.NAME, "viridanus"))) %>%
 
-# load("data/ebd_IN_relJan-2022.RData")
-# 
-# data0 <- data %>%
-#   filter(COMMON.NAME %in% c("Greenish Warbler", "Blyth's Reed Warbler",
-#                             "Brown-breasted Flycatcher")) %>%
-#   filter(YEAR > 2014)
-# 
-# met_week <- function(dates) {
-#   require(lubridate)
-#   normal_year <- c((0:363 %/% 7 + 1), 52)
-#   leap_year   <- c(normal_year[1:59], 9, normal_year[60:365])
-#   year_day    <- yday(dates)
-#   return(ifelse(leap_year(dates), leap_year[year_day], normal_year[year_day]))
-# }
-# 
-# data0 <- data0 %>%
-#   select(!c("LAST.EDITED.DATE", "BREEDING.CODE", "HAS.MEDIA", "APPROVED", "REVIEWED")) %>% 
-#   mutate(DAY.Y = yday(OBSERVATION.DATE),
-#          WEEK.Y = met_week(OBSERVATION.DATE),
-#          M.YEAR = if_else(DAY.Y <= 151, YEAR-1, YEAR), # from 1st June to 31st May
-#          WEEK.MY = if_else(WEEK.Y > 21, WEEK.Y-21, 52-(21-WEEK.Y)))  %>%
-#   group_by(GROUP.ID, COMMON.NAME) %>%
-#   slice(1) %>% ungroup() # removing dup. lists
-# 
-# save(data0, file = "data/data0.RData")
+data0 <- data0 %>%
+  group_by(GROUP.ID, COMMON.NAME) %>%
+  slice(1) %>% ungroup() # removing dup. lists
+
+save(data0, file = "data/data0.RData")
 
 load("data/data0.RData")
 
