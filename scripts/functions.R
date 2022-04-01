@@ -51,7 +51,10 @@ data <- data %>%
          DAY.Y = yday(OBSERVATION.DATE),
          WEEK.Y = met_week(OBSERVATION.DATE),
          M.YEAR = if_else(DAY.Y <= 151, YEAR-1, YEAR), # from 1st June to 31st May
-         WEEK.MY = if_else(WEEK.Y > 21, WEEK.Y-21, 52-(21-WEEK.Y)))
+         WEEK.MY = if_else(WEEK.Y > 21, WEEK.Y-21, 52-(21-WEEK.Y)),
+         # 1 deg resolution
+         LATITUDE1 = round(LATITUDE, 0)) # since 1deg ~ 100km
+  
 
 assign("data", data, .GlobalEnv)
 
@@ -67,12 +70,11 @@ save(data, file = "data/data.RData")
 # path to classification of year-month as COVID categories
 
 
-dataqual_filt <- function(datapath, groupaccspath, maxvel = 20, minsut = 2){
+dataqual_filt <- function(data, groupaccspath, maxvel = 20, minsut = 2){
   
-  ### importing from usual modified ebd RData
-  load(datapath) 
-  
-  require(tidyverse)
+  # data object already in environment
+
+    require(tidyverse)
   require(lubridate)
   
   ### list of group accounts to be filtered
@@ -158,3 +160,31 @@ dataqual_filt <- function(datapath, groupaccspath, maxvel = 20, minsut = 2){
   
   save(data, file = "data/data.RData")
 }
+
+
+##### select certain species and subspecies ----------
+
+select_species <- function(data){
+  
+  # for GrWa, excluding data from Himalayan states and from WB eastwards, 
+  # to focus on ssp. viridanus with extralimital breeding range
+  
+  data <- data %>% 
+    filter((CATEGORY == "species" & COMMON.NAME %in% c("Blyth's Reed Warbler", 
+                                                       "Brown-breasted Flycatcher", 
+                                                       "Greenish Warbler")) |
+             # (CATEGORY == "issf" & str_detect(SUBSPECIES.COMMON.NAME, "viridanus")) |
+             (CATEGORY == "issf" & COMMON.NAME %in% c("Blyth's Reed Warbler", 
+                                                         "Brown-breasted Flycatcher"))) %>%
+    filter(!(COMMON.NAME == "Greenish Warbler" & 
+               STATE %in% c("West Bengal", "Sikkim", "Meghalaya", "Assam", "Arunachal Pradesh",
+                            "Nagaland", "Manipur", "Mizoram", "Tripura",
+                            "Jammu and Kashmir", "Himachal Pradesh", "Uttarakhand", 
+                            "Uttar Pradesh", "Bihar"))) # these two states?
+    
+  
+  assign("data", data, .GlobalEnv)
+  
+  save(data, file = "data/data.RData")
+  
+  }

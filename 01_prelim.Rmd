@@ -21,6 +21,8 @@ library(lubridate)
 library(patchwork)
 # library(boot)
 
+source("scripts/functions.R")
+
 theme_set(theme_bw())
 
 # migration_palette <- c("#1B9E77", "#E89005", "#EF4050", "#9678B6")
@@ -32,10 +34,28 @@ knitr::opts_chunk$set(echo = FALSE, warnings = FALSE,
 
 ```{r data_filt, cache=TRUE}
 
+# load("data/ebd_IN_relJan-2022.RData")
+
+# met_week <- function(dates) {
+#   require(lubridate)
+#   normal_year <- c((0:363 %/% 7 + 1), 52)
+#   leap_year   <- c(normal_year[1:59], 9, normal_year[60:365])
+#   year_day    <- yday(dates)
+#   return(ifelse(leap_year(dates), leap_year[year_day], normal_year[year_day]))
+# }
+# 
+# data0 <- data0 %>%
+#   mutate(DAY.Y = yday(OBSERVATION.DATE),
+#          WEEK.Y = met_week(OBSERVATION.DATE),
+#          M.YEAR = if_else(DAY.Y <= 151, YEAR-1, YEAR), # from 1st June to 31st May
+#          WEEK.MY = if_else(WEEK.Y > 21, WEEK.Y-21, 52-(21-WEEK.Y)))
+
+
+
+
+
 # rawpath <- "data/ebd_IN_relFeb-2022.txt"
 # senspath <- "data/ebd_sensitive_relDec-2021_IN.txt"
-# 
-# source("scripts/functions.R")
 
 # # processing the data for current use
 # data_process(rawpath, senspath)
@@ -43,19 +63,16 @@ knitr::opts_chunk$set(echo = FALSE, warnings = FALSE,
 # # cleaning and filtering for data quality
 # dataqual_filt(datapath, groupaccspath, maxvel = 20, minsut = 2)
 
+# # selecting certain species for this analysis
+# # for GrWa, excluding data from Himalayan states and from WB eastwards, to focus on ssp. viridanus with extralimital breeding range
+# select_species(data)
 
 
-### load("data/ebd_IN_relJan-2022.RData")
 
-data0 <- data %>% 
-  filter((CATEGORY == "species" & COMMON.NAME %in% c("Blyth's Reed Warbler", 
-                                                    "Brown-breasted Flycatcher", 
-                                                    "Greenish Warbler")) |
-           (CATEGORY == "issf" & str_detect(SUBSPECIES.COMMON.NAME, "viridanus"))) %>%
-
-data0 <- data0 %>%
+data0 <- data %>%
   group_by(GROUP.ID, COMMON.NAME) %>%
   slice(1) %>% ungroup() # removing dup. lists
+
 
 save(data0, file = "data/data0.RData")
 
@@ -103,7 +120,7 @@ plot1 <- ggplot(data1, aes(WEEK.MY, LATITUDE, colour = POINTDENS)) +
   scale_x_continuous(breaks = (seq(0,52,4))) +
   scale_y_continuous(breaks = (seq(0,40,5))) +
   coord_trans(y = "log10") +
-  scale_colour_gradient(low = "#21421e", high = "#66b032") +
+  scale_colour_viridis_c() +
   labs(title = "Reports of migrant species varying with weeks and latitude",
        subtitle = "X-axis represents number of weeks starting from June to May") +
   geom_jitter(size = 0.8) +
@@ -112,6 +129,8 @@ plot1 <- ggplot(data1, aes(WEEK.MY, LATITUDE, colour = POINTDENS)) +
   annotate("text", x = 32, y = 10, label = "Jan", angle = 90) +
   facet_wrap(~COMMON.NAME) 
 
+plot1
+
 ```
 
 ## Investigating arrival and departure timings
@@ -119,8 +138,6 @@ plot1 <- ggplot(data1, aes(WEEK.MY, LATITUDE, colour = POINTDENS)) +
 ```{r 02_prelimvis, cache=TRUE, message=FALSE}
 
 data2 <- data0 %>% 
-  # 1 deg resolution
-  mutate(LATITUDE1 = round(LATITUDE, 0)) %>% # since 1deg ~ 100km
   group_by(COMMON.NAME, LATITUDE1) %>% 
   summarise(N = n(),
             ARR = unname(quantile(WEEK.MY, probs = 0.025, type = 1)), 
