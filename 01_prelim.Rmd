@@ -20,6 +20,8 @@ library(tidyverse)
 library(lubridate)
 library(patchwork)
 # library(boot)
+# library(MASS)
+
 
 source("scripts/functions.R")
 
@@ -34,47 +36,22 @@ knitr::opts_chunk$set(echo = FALSE, warnings = FALSE,
 
 ```{r data_filt, cache=TRUE}
 
-# load("data/ebd_IN_relJan-2022.RData")
-
-# met_week <- function(dates) {
-#   require(lubridate)
-#   normal_year <- c((0:363 %/% 7 + 1), 52)
-#   leap_year   <- c(normal_year[1:59], 9, normal_year[60:365])
-#   year_day    <- yday(dates)
-#   return(ifelse(leap_year(dates), leap_year[year_day], normal_year[year_day]))
-# }
-# 
-# data0 <- data0 %>%
-#   mutate(DAY.Y = yday(OBSERVATION.DATE),
-#          WEEK.Y = met_week(OBSERVATION.DATE),
-#          M.YEAR = if_else(DAY.Y <= 151, YEAR-1, YEAR), # from 1st June to 31st May
-#          WEEK.MY = if_else(WEEK.Y > 21, WEEK.Y-21, 52-(21-WEEK.Y)))
-
-
-
-
-
 # rawpath <- "data/ebd_IN_relFeb-2022.txt"
 # senspath <- "data/ebd_sensitive_relDec-2021_IN.txt"
+# groupaccspath <- 
 
 # # processing the data for current use
-# data_process(rawpath, senspath)
+# data_process(rawpath, senspath) %>% 
+#   # cleaning and filtering for data quality
+#   dataqual_filt(groupaccspath, maxvel = 20, minsut = 2) %>% 
+#   # weekly reporting frequencies
+#   sp_repfreq() 
 
-# # cleaning and filtering for data quality
-# dataqual_filt(datapath, groupaccspath, maxvel = 20, minsut = 2)
+# # selecting species for this analysis
+# data0 <-  sp_select(data) %>%
+#   left_join(dataRF)
 
-# # selecting certain species for this analysis
-# # for GrWa, excluding data from Himalayan states and from WB eastwards, to focus on ssp. viridanus with extralimital breeding range
-# select_species(data)
-
-
-
-data0 <- data %>%
-  group_by(GROUP.ID, COMMON.NAME) %>%
-  slice(1) %>% ungroup() # removing dup. lists
-
-
-save(data0, file = "data/data0.RData")
+# save(data0, file = "data/data0.RData")
 
 load("data/data0.RData")
 
@@ -88,7 +65,7 @@ load("data/data0.RData")
 
 # Exploration
 
-Below are explorations from before I joined BCI.
+Explorations from before I joined BCI:
 
 ## Plain visualisation of migration timings with latitudes 
 
@@ -103,11 +80,10 @@ data1 <- data0 %>%
 # creating a new data frame of 2d density grid
 # fitting a model
 # applying the model to the original data to estimate density at that point
-library(MASS)
-dens <- kde2d(data1$WEEK.MY, data1$LATITUDE)
+dens <- MASS::kde2d(data1$WEEK.MY, data1$LATITUDE)
 grid <- data.frame(with(dens, expand.grid(x,y)), as.vector(dens$z))
 names(grid) <- c("xgr", "ygr", "zgr")
-mod <- loess(zgr ~ xgr*ygr, data = grid, span = 0.5)
+mod <- MASS::loess(zgr ~ xgr*ygr, data = grid, span = 0.5)
 
 data1 <- data1 %>% 
   ungroup() %>% 

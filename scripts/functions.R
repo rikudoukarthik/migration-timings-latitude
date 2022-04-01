@@ -7,11 +7,11 @@ data_process <- function(rawpath, senspath) {
 require(lubridate)
 require(tidyverse)
 
-preimp <- c("CATEGORY","COMMON.NAME","SUBSPECIES.COMMON.NAME","OBSERVATION.COUNT",
-            "LOCALITY.ID","LOCALITY.TYPE","STATE","COUNTY","LATITUDE","LONGITUDE",
-            "OBSERVATION.DATE","TIME.OBSERVATIONS.STARTED","OBSERVER.ID","PROTOCOL.TYPE",
-            "DURATION.MINUTES","EFFORT.DISTANCE.KM","LOCALITY","NUMBER.OBSERVERS",
-            "ALL.SPECIES.REPORTED","GROUP.IDENTIFIER","SAMPLING.EVENT.IDENTIFIER","TRIP.COMMENTS")
+preimp <- c("CATEGORY","COMMON.NAME","SUBSPECIES.COMMON.NAME","OBSERVATION.COUNT", "LOCALITY.ID",
+            "LOCALITY.TYPE","STATE","COUNTY","LATITUDE","LONGITUDE","OBSERVATION.DATE",
+            "TIME.OBSERVATIONS.STARTED","OBSERVER.ID","PROTOCOL.TYPE","DURATION.MINUTES",
+            "EFFORT.DISTANCE.KM","LOCALITY","NUMBER.OBSERVERS","ALL.SPECIES.REPORTED",
+            "GROUP.IDENTIFIER","SAMPLING.EVENT.IDENTIFIER","TRIP.COMMENTS")
 
 nms <- names(read.delim(rawpath, nrows = 1, sep = "\t", header = T, quote = "", 
                         stringsAsFactors = F, na.strings = c(""," ", NA)))
@@ -52,9 +52,17 @@ data <- data %>%
          WEEK.Y = met_week(OBSERVATION.DATE),
          M.YEAR = if_else(DAY.Y <= 151, YEAR-1, YEAR), # from 1st June to 31st May
          WEEK.MY = if_else(WEEK.Y > 21, WEEK.Y-21, 52-(21-WEEK.Y)),
-         # 1 deg resolution
-         LATITUDE1 = round(LATITUDE, 0)) # since 1deg ~ 100km
+         # 1 deg resolution (since 1deg ~ 100km)
+         LATITUDE1 = round(LATITUDE, 0)) 
   
+
+### removing duplicate lists
+data <- data %>%
+  group_by(GROUP.ID, COMMON.NAME) %>%
+  arrange(SAMPLING.EVENT.IDENTIFIER) %>% 
+  slice(1) %>% ungroup()
+
+
 
 assign("data", data, .GlobalEnv)
 
@@ -74,7 +82,7 @@ dataqual_filt <- function(data, groupaccspath, maxvel = 20, minsut = 2){
   
   # data object already in environment
 
-    require(tidyverse)
+  require(tidyverse)
   require(lubridate)
   
   ### list of group accounts to be filtered
@@ -117,7 +125,7 @@ dataqual_filt <- function(data, groupaccspath, maxvel = 20, minsut = 2){
   ### main data filtering ######
   
   data <- data %>% 
-    filter(YEAR >= 2014) %>% # retaining only data from 2019 onward
+    filter(YEAR >= 2014) %>% # retaining only data from 2014 onward
     anti_join(filtGA) %>% # removing data from group accounts
     group_by(GROUP.ID) %>% 
     mutate(NO.SP = n_distinct(COMMON.NAME)) %>%
@@ -162,14 +170,35 @@ dataqual_filt <- function(data, groupaccspath, maxvel = 20, minsut = 2){
 }
 
 
+
+##### weekly reporting frequencies ----------
+
+# calculating weekly reporting frequencies
+
+sp_repfreq <- function(data){
+  
+dataRF <- data %>% 
+  filter(ALL.SPECIES.REPORTED == 1) %>% # complete lists only
+  group_by(LATITUDE1, WEEK.MY) %>% 
+  mutate(TOT.LISTS = n_distinct(GROUP.ID)) %>% 
+  group_by(LATITUDE1, WEEK.MY, TOT.LISTS, COMMON.NAME) %>% 
+  summarise(NO.LISTS = n_distinct(GROUP.ID),
+            REP.FREQ = NO.LISTS/TOT.LISTS)
+
+assign("dataRF", dataRF, .GlobalEnv)
+
+save(dataRF, file = "data/dataRF.RData")
+
+}
+
 ##### select certain species and subspecies ----------
 
-select_species <- function(data){
+sp_select <- function(data){
   
   # for GrWa, excluding data from Himalayan states and from WB eastwards, 
   # to focus on ssp. viridanus with extralimital breeding range
   
-  data <- data %>% 
+  data0 <- data %>% 
     filter((CATEGORY == "species" & COMMON.NAME %in% c("Blyth's Reed Warbler", 
                                                        "Brown-breasted Flycatcher", 
                                                        "Greenish Warbler")) |
@@ -183,8 +212,8 @@ select_species <- function(data){
                             "Uttar Pradesh", "Bihar"))) # these two states?
     
   
-  assign("data", data, .GlobalEnv)
+  assign("data0", data0, .GlobalEnv)
   
-  save(data, file = "data/data.RData")
+  return(data0)
   
   }
