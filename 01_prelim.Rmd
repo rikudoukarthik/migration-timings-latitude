@@ -38,19 +38,21 @@ knitr::opts_chunk$set(echo = FALSE, warnings = FALSE,
 
 # rawpath <- "data/ebd_IN_relFeb-2022.txt"
 # senspath <- "data/ebd_sensitive_relDec-2021_IN.txt"
-# groupaccspath <- 
-
-# # processing the data for current use
-# data_process(rawpath, senspath) %>% 
-#   # cleaning and filtering for data quality
-#   dataqual_filt(groupaccspath, maxvel = 20, minsut = 2) %>% 
-#   # weekly reporting frequencies
-#   sp_repfreq() 
-
+# groupaccspath <- "data/ebd_users_GA_relDec-2021.csv"
+# 
+# # processing the data for current use (34 mins)
+# data_process(rawpath, senspath) 
+# 
+# # cleaning and filtering for data quality (7 mins)
+# dataqual_filt(data, groupaccspath, maxvel = 20, minsut = 2)
+# 
+# # weekly reporting frequencies (<1 min)
+# sp_repfreq(data)
+# 
 # # selecting species for this analysis
 # data0 <-  sp_select(data) %>%
 #   left_join(dataRF)
-
+# 
 # save(data0, file = "data/data0.RData")
 
 load("data/data0.RData")

@@ -7,7 +7,7 @@ data_process <- function(rawpath, senspath) {
 require(lubridate)
 require(tidyverse)
 
-preimp <- c("CATEGORY","COMMON.NAME","SUBSPECIES.COMMON.NAME","OBSERVATION.COUNT", "LOCALITY.ID",
+preimp <- c("CATEGORY","COMMON.NAME","SUBSPECIES.COMMON.NAME","OBSERVATION.COUNT","LOCALITY.ID",
             "LOCALITY.TYPE","STATE","COUNTY","LATITUDE","LONGITUDE","OBSERVATION.DATE",
             "TIME.OBSERVATIONS.STARTED","OBSERVER.ID","PROTOCOL.TYPE","DURATION.MINUTES",
             "EFFORT.DISTANCE.KM","LOCALITY","NUMBER.OBSERVERS","ALL.SPECIES.REPORTED",
@@ -96,31 +96,6 @@ dataqual_filt <- function(data, groupaccspath, maxvel = 20, minsut = 2){
   filtGA <- groupaccs %>% filter(CATEGORY == "GA.1") %>% select(OBSERVER.ID)
   
 
-
-  
-  ### new observer data (to calculate no. of new observers metric) #######
-  
-  new_obsr_data <- data %>% 
-    select(c("YEAR", "MONTH", "STATE", "SAMPLING.EVENT.IDENTIFIER",
-             "LAST.EDITED.DATE", "OBSERVATION.DATE", "OBSERVER.ID")) %>% 
-    mutate(LAST.EDITED.DATE = ymd_hms(LAST.EDITED.DATE)) %>% 
-    group_by(OBSERVER.ID) %>% 
-    arrange(LAST.EDITED.DATE) %>% 
-    ungroup() %>% 
-    distinct(OBSERVER.ID, .keep_all = TRUE) %>%
-    mutate(YEAR = year(LAST.EDITED.DATE),
-           MONTH = month(LAST.EDITED.DATE)) %>% 
-    filter(YEAR >= 2014) %>% 
-    rename(LE.YEAR = YEAR,
-           LE.MONTH = MONTH) %>% 
-    mutate(YEAR = year(OBSERVATION.DATE), 
-           MONTH = month(OBSERVATION.DATE))
-  
-  # filtering
-  new_obsr_data <- new_obsr_data %>% anti_join(filtGA) 
-  save(new_obsr_data, file = "data/new_obsr_data.RData")
-  
-  
   
   ### main data filtering ######
   
@@ -165,7 +140,7 @@ dataqual_filt <- function(data, groupaccspath, maxvel = 20, minsut = 2){
     filter(ALL.SPECIES.REPORTED == 1)
   
   assign("data", data, .GlobalEnv)
-  
+
   save(data, file = "data/data.RData")
 }
 
@@ -177,13 +152,18 @@ dataqual_filt <- function(data, groupaccspath, maxvel = 20, minsut = 2){
 
 sp_repfreq <- function(data){
   
-dataRF <- data %>% 
+temp <-  data %>% 
   filter(ALL.SPECIES.REPORTED == 1) %>% # complete lists only
   group_by(LATITUDE1, WEEK.MY) %>% 
-  mutate(TOT.LISTS = n_distinct(GROUP.ID)) %>% 
-  group_by(LATITUDE1, WEEK.MY, TOT.LISTS, COMMON.NAME) %>% 
-  summarise(NO.LISTS = n_distinct(GROUP.ID),
-            REP.FREQ = NO.LISTS/TOT.LISTS)
+  summarise(TOT.LISTS = n_distinct(GROUP.ID))
+  
+dataRF <- data %>% 
+  filter(ALL.SPECIES.REPORTED == 1) %>% # complete lists only
+  group_by(LATITUDE1, WEEK.MY, COMMON.NAME) %>% 
+  summarise(NO.LISTS = n_distinct(GROUP.ID)) %>% 
+  left_join(temp) %>% 
+  group_by(LATITUDE1, WEEK.MY, COMMON.NAME) %>% 
+  summarise(REP.FREQ = NO.LISTS/TOT.LISTS)
 
 assign("dataRF", dataRF, .GlobalEnv)
 
@@ -202,7 +182,7 @@ sp_select <- function(data){
     filter((CATEGORY == "species" & COMMON.NAME %in% c("Blyth's Reed Warbler", 
                                                        "Brown-breasted Flycatcher", 
                                                        "Greenish Warbler")) |
-             # (CATEGORY == "issf" & str_detect(SUBSPECIES.COMMON.NAME, "viridanus")) |
+             (CATEGORY == "issf" & str_detect(SUBSPECIES.COMMON.NAME, "viridanus")) |
              (CATEGORY == "issf" & COMMON.NAME %in% c("Blyth's Reed Warbler", 
                                                          "Brown-breasted Flycatcher"))) %>%
     filter(!(COMMON.NAME == "Greenish Warbler" & 
