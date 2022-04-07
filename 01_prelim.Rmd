@@ -71,7 +71,7 @@ Explorations from before I joined BCI:
 
 ## Plain visualisation of migration timings with latitudes 
 
-```{r 01_prelimvis, cache=TRUE, message=FALSE}
+```{r 01_reports, cache=TRUE, message=FALSE}
 
 data1 <- data0 %>% 
   group_by(COMMON.NAME, LATITUDE, WEEK.MY) %>% 
@@ -85,7 +85,7 @@ data1 <- data0 %>%
 dens <- MASS::kde2d(data1$WEEK.MY, data1$LATITUDE)
 grid <- data.frame(with(dens, expand.grid(x,y)), as.vector(dens$z))
 names(grid) <- c("xgr", "ygr", "zgr")
-mod <- MASS::loess(zgr ~ xgr*ygr, data = grid, span = 0.5)
+mod <- loess(zgr ~ xgr*ygr, data = grid, span = 0.5)
 
 data1 <- data1 %>% 
   ungroup() %>% 
@@ -94,7 +94,7 @@ data1 <- data1 %>%
 
 rm(list = c("dens","grid","mod"))
 
-plot1 <- ggplot(data1, aes(WEEK.MY, LATITUDE, colour = POINTDENS)) + 
+reports <- ggplot(data1, aes(WEEK.MY, LATITUDE, colour = POINTDENS)) + 
   scale_x_continuous(breaks = (seq(0,52,4))) +
   scale_y_continuous(breaks = (seq(0,40,5))) +
   coord_trans(y = "log10") +
@@ -107,13 +107,16 @@ plot1 <- ggplot(data1, aes(WEEK.MY, LATITUDE, colour = POINTDENS)) +
   annotate("text", x = 32, y = 10, label = "Jan", angle = 90) +
   facet_wrap(~COMMON.NAME) 
 
-plot1
+reports
+
+ggsave("01_prelim_figs/01_reports.png", plot = reports,
+       width = 15, height = 8, units = "in")
 
 ```
 
 ## Investigating arrival and departure timings
 
-```{r 02_prelimvis, cache=TRUE, message=FALSE}
+```{r 02_arrdep_quan, cache=TRUE, message=FALSE}
 
 data2 <- data0 %>% 
   group_by(COMMON.NAME, LATITUDE1) %>% 
@@ -125,7 +128,7 @@ data2 <- data0 %>%
   mutate(DATE.TYPE = factor(DATE.TYPE, levels = c("DEP","ARR")))
 
 
-plot2 <- ggplot(data2) + 
+arrdep_quan <- ggplot(data2) + 
   theme(strip.placement = "outside") +
   geom_point(aes(x = WEEK, y = LATITUDE1, colour = DATE.TYPE)) +
   scale_colour_manual(values = c("#b22222","#006994")) +
@@ -134,7 +137,104 @@ plot2 <- ggplot(data2) +
   geom_text(aes(x = 31, y = 10, label = "Jan"), nudge_x = 1, angle = 90) +
   facet_wrap(~COMMON.NAME) +
   scale_y_continuous(breaks = (seq(0, 40, 5))) +
-  ggtitle("Variation of first arrival and last departure dates with latitude") 
+  labs(title = "Variation of first arrival and last departure dates with latitude",
+       subtitle = "Using quantiles of weekly records per latitude to assign arrival and departure") 
+
+arrdep_quan
+
+ggsave("01_prelim_figs/02_arrdep_quan.png", plot = arrdep_quan,
+       width = 13, height = 7, units = "in")
+
+
+
+palette1 <- c("#6D9C94", "#F8EF8C", "#512D38") # like a dull viridis
+palette2 <- c("#F0F2EF", "#5C5346")
+
+
+data3 <- data0 %>% 
+  group_by(COMMON.NAME, LATITUDE1) %>% 
+  filter(round(REP.FREQ, 2) %in% seq(0.00, 0.75, 0.01)) %>%
+  ungroup() %>% 
+  distinct(COMMON.NAME, LATITUDE1, WEEK.MY, REP.FREQ)
+
+((ggplot(filter(data3, COMMON.NAME == "Blyth's Reed Warbler")) +
+    geom_point(aes(x = WEEK.MY, y = LATITUDE1, colour = REP.FREQ), size = 3) +
+    scale_colour_gradientn(colours = palette2) +
+    # scale_colour_viridis_c(option = "magma", direction = -1) +
+    geom_vline(aes(xintercept = 31)) +
+    geom_text(aes(x = 31, y = 7, label = "Dec"), nudge_x = -2, angle = 90) +
+    geom_text(aes(x = 31, y = 7, label = "Jan"), nudge_x = 1, angle = 90) +
+    scale_y_continuous(limits = c(7, 37), breaks = (seq(0, 40, 5))) +
+    labs(subtitle = "Blyth's Reed Warbler")) |
+(ggplot(filter(data3, COMMON.NAME == "Brown-breasted Flycatcher")) +
+   geom_point(aes(x = WEEK.MY, y = LATITUDE1, colour = REP.FREQ), size = 3) +
+   scale_colour_gradientn(colours = palette2) +
+   # scale_colour_viridis_c(option = "magma", direction = -1) +
+   geom_vline(aes(xintercept = 31)) +
+   geom_text(aes(x = 31, y = 7, label = "Dec"), nudge_x = -2, angle = 90) +
+   geom_text(aes(x = 31, y = 7, label = "Jan"), nudge_x = 1, angle = 90) +
+   scale_y_continuous(limits = c(7, 37), breaks = (seq(0, 40, 5))) +
+   labs(subtitle = "Brown-breasted Flycatcher")) |
+(ggplot(filter(data3, COMMON.NAME == "Greenish Warbler")) +
+   geom_point(aes(x = WEEK.MY, y = LATITUDE1, colour = REP.FREQ), size = 3) +
+   scale_colour_gradientn(colours = palette2) +
+   # scale_colour_viridis_c(option = "magma", direction = -1) +
+   geom_vline(aes(xintercept = 31)) +
+   geom_text(aes(x = 31, y = 7, label = "Dec"), nudge_x = -2, angle = 90) +
+   geom_text(aes(x = 31, y = 7, label = "Jan"), nudge_x = 1, angle = 90) +
+   scale_y_continuous(limits = c(7, 37), breaks = (seq(0, 40, 5))) +
+   labs(subtitle = "Greenish Warbler"))) +
+plot_annotation(title = "Variation of first arrival and last departure dates with latitude",
+                subtitle = "Using weekly reporting frequencies to judge passage and wintering") -> arrdep_rf
+
+ggsave("01_prelim_figs/02_arrdep_rf_palette2.png", plot = arrdep_rf,
+       width = 15, height = 8, units = "in")
+
+
+
+# should probably use proportion of max rep.freq. to colour than just rep.freq.
+
+data4 <- data0 %>% 
+  distinct(COMMON.NAME, LATITUDE1, WEEK.MY, REP.FREQ) %>% 
+  group_by(COMMON.NAME, LATITUDE1) %>%
+  mutate(MAX.RF = max(REP.FREQ)) %>% 
+  group_by(COMMON.NAME, LATITUDE1, MAX.RF, WEEK.MY) %>% 
+  summarise(REP.FREQ = REP.FREQ,
+            PROP.RF = REP.FREQ/MAX.RF) %>% 
+  ungroup()
+
+((ggplot(filter(data4, COMMON.NAME == "Blyth's Reed Warbler")) +
+    geom_point(aes(x = WEEK.MY, y = LATITUDE1, colour = PROP.RF), size = 3) +
+    scale_colour_gradientn(colours = palette2) +
+    # scale_colour_viridis_c(option = "magma", direction = -1) +
+    geom_vline(aes(xintercept = 31)) +
+    geom_text(aes(x = 31, y = 7, label = "Dec"), nudge_x = -2, angle = 90) +
+    geom_text(aes(x = 31, y = 7, label = "Jan"), nudge_x = 1, angle = 90) +
+    scale_y_continuous(limits = c(7, 37), breaks = (seq(0, 40, 5))) +
+    labs(subtitle = "Blyth's Reed Warbler")) |
+(ggplot(filter(data4, COMMON.NAME == "Brown-breasted Flycatcher")) +
+   geom_point(aes(x = WEEK.MY, y = LATITUDE1, colour = PROP.RF), size = 3) +
+   scale_colour_gradientn(colours = palette2) +
+   # scale_colour_viridis_c(option = "magma", direction = -1) +
+   geom_vline(aes(xintercept = 31)) +
+   geom_text(aes(x = 31, y = 7, label = "Dec"), nudge_x = -2, angle = 90) +
+   geom_text(aes(x = 31, y = 7, label = "Jan"), nudge_x = 1, angle = 90) +
+   scale_y_continuous(limits = c(7, 37), breaks = (seq(0, 40, 5))) +
+   labs(subtitle = "Brown-breasted Flycatcher")) |
+(ggplot(filter(data4, COMMON.NAME == "Greenish Warbler")) +
+   geom_point(aes(x = WEEK.MY, y = LATITUDE1, colour = PROP.RF), size = 3) +
+   scale_colour_gradientn(colours = palette2) +
+   # scale_colour_viridis_c(option = "magma", direction = -1) +
+   geom_vline(aes(xintercept = 31)) +
+   geom_text(aes(x = 31, y = 7, label = "Dec"), nudge_x = -2, angle = 90) +
+   geom_text(aes(x = 31, y = 7, label = "Jan"), nudge_x = 1, angle = 90) +
+   scale_y_continuous(limits = c(7, 37), breaks = (seq(0, 40, 5))) +
+   labs(subtitle = "Greenish Warbler"))) +
+plot_annotation(title = "Variation of first arrival and last departure dates with latitude",
+                subtitle = "Using proportion of max. reporting frequency per latitude to judge passage and wintering") -> arrdep_proprf
+
+ggsave("01_prelim_figs/02_arrdep_proprf.png", plot = arrdep_proprf,
+       width = 15, height = 8, units = "in")
 
 
 ```
