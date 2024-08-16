@@ -90,7 +90,7 @@ data1 <- data_full %>%
 
 
 arrdep_quan <- ggplot(data1 |> 
-  filter(COMMON.NAME %in% c("Blyth's Reed Warbler", "Greenish Warbler", 
+  filter(COMMON.NAME %in% c("Blyth's Reed Warbler", "Greenish Warbler", "Bar-headed Goose",
                             "Brown-breasted Flycatcher", "Brown Shrike", "Bank Swallow",
                             "Booted Eagle")),
   aes(x = DAY.MY, y = LAT.BOX, colour = DATE.TYPE)) + 
@@ -113,98 +113,6 @@ arrdep_quan
 
 ggsave("02_explor_figs/01_arrdep_quan.png", plot = arrdep_quan,
        width = 13, height = 7, units = "in")
-
-
-
-# palette1 <- c("#6D9C94", "#F8EF8C", "#512D38") # like a dull viridis
-# palette2 <- c("#F0F2EF", "#5C5346")
-# 
-# 
-# data3 <- data0 %>% 
-#   group_by(COMMON.NAME, LAT.BOX) %>% 
-#   filter(round(REP.FREQ, 2) %in% seq(0.00, 0.75, 0.01)) %>%
-#   ungroup() %>% 
-#   distinct(COMMON.NAME, LAT.BOX, WEEK.MY, REP.FREQ)
-# 
-# ((ggplot(filter(data3, COMMON.NAME == "Blyth's Reed Warbler")) +
-#     geom_point(aes(x = WEEK.MY, y = LAT.BOX, colour = REP.FREQ), size = 3) +
-#     scale_colour_gradientn(colours = palette2) +
-#     # scale_colour_viridis_c(option = "magma", direction = -1) +
-#     geom_vline(aes(xintercept = 31)) +
-#     geom_text(aes(x = 31, y = 7, label = "Dec"), nudge_x = -2, angle = 90) +
-#     geom_text(aes(x = 31, y = 7, label = "Jan"), nudge_x = 1, angle = 90) +
-#     scale_y_continuous(limits = c(7, 37), breaks = (seq(0, 40, 5))) +
-#     labs(subtitle = "Blyth's Reed Warbler")) |
-# (ggplot(filter(data3, COMMON.NAME == "Brown-breasted Flycatcher")) +
-#    geom_point(aes(x = WEEK.MY, y = LAT.BOX, colour = REP.FREQ), size = 3) +
-#    scale_colour_gradientn(colours = palette2) +
-#    # scale_colour_viridis_c(option = "magma", direction = -1) +
-#    geom_vline(aes(xintercept = 31)) +
-#    geom_text(aes(x = 31, y = 7, label = "Dec"), nudge_x = -2, angle = 90) +
-#    geom_text(aes(x = 31, y = 7, label = "Jan"), nudge_x = 1, angle = 90) +
-#    scale_y_continuous(limits = c(7, 37), breaks = (seq(0, 40, 5))) +
-#    labs(subtitle = "Brown-breasted Flycatcher")) |
-# (ggplot(filter(data3, COMMON.NAME == "Greenish Warbler")) +
-#    geom_point(aes(x = WEEK.MY, y = LAT.BOX, colour = REP.FREQ), size = 3) +
-#    scale_colour_gradientn(colours = palette2) +
-#    # scale_colour_viridis_c(option = "magma", direction = -1) +
-#    geom_vline(aes(xintercept = 31)) +
-#    geom_text(aes(x = 31, y = 7, label = "Dec"), nudge_x = -2, angle = 90) +
-#    geom_text(aes(x = 31, y = 7, label = "Jan"), nudge_x = 1, angle = 90) +
-#    scale_y_continuous(limits = c(7, 37), breaks = (seq(0, 40, 5))) +
-#    labs(subtitle = "Greenish Warbler"))) +
-# plot_annotation(title = "Variation of first arrival and last departure dates with latitude",
-#                 subtitle = "Using weekly reporting frequencies to judge passage and wintering") -> arrdep_rf
-# 
-# ggsave("01_prelim_figs/02_arrdep_rf_palette2.png", plot = arrdep_rf,
-#        width = 15, height = 8, units = "in")
-# 
-# 
-# 
-# # should probably use proportion of max rep.freq. to colour than just rep.freq.
-# 
-# data4 <- data0 %>% 
-#   distinct(COMMON.NAME, LAT.BOX, WEEK.MY, REP.FREQ) %>% 
-#   group_by(COMMON.NAME, LAT.BOX) %>%
-#   mutate(MAX.RF = max(REP.FREQ)) %>% 
-#   group_by(COMMON.NAME, LAT.BOX, MAX.RF, WEEK.MY) %>% 
-#   summarise(REP.FREQ = REP.FREQ,
-#             PROP.RF = REP.FREQ/MAX.RF) %>% 
-#   ungroup()
-# 
-# ((ggplot(filter(data4, COMMON.NAME == "Blyth's Reed Warbler")) +
-#     geom_point(aes(x = WEEK.MY, y = LAT.BOX, colour = PROP.RF), size = 3) +
-#     scale_colour_gradientn(colours = palette2) +
-#     # scale_colour_viridis_c(option = "magma", direction = -1) +
-#     geom_vline(aes(xintercept = 31)) +
-#     geom_text(aes(x = 31, y = 7, label = "Dec"), nudge_x = -2, angle = 90) +
-#     geom_text(aes(x = 31, y = 7, label = "Jan"), nudge_x = 1, angle = 90) +
-#     scale_y_continuous(limits = c(7, 37), breaks = (seq(0, 40, 5))) +
-#     labs(subtitle = "Blyth's Reed Warbler")) |
-# (ggplot(filter(data4, COMMON.NAME == "Brown-breasted Flycatcher")) +
-#    geom_point(aes(x = WEEK.MY, y = LAT.BOX, colour = PROP.RF), size = 3) +
-#    scale_colour_gradientn(colours = palette2) +
-#    # scale_colour_viridis_c(option = "magma", direction = -1) +
-#    geom_vline(aes(xintercept = 31)) +
-#    geom_text(aes(x = 31, y = 7, label = "Dec"), nudge_x = -2, angle = 90) +
-#    geom_text(aes(x = 31, y = 7, label = "Jan"), nudge_x = 1, angle = 90) +
-#    scale_y_continuous(limits = c(7, 37), breaks = (seq(0, 40, 5))) +
-#    labs(subtitle = "Brown-breasted Flycatcher")) |
-# (ggplot(filter(data4, COMMON.NAME == "Greenish Warbler")) +
-#    geom_point(aes(x = WEEK.MY, y = LAT.BOX, colour = PROP.RF), size = 3) +
-#    scale_colour_gradientn(colours = palette2) +
-#    # scale_colour_viridis_c(option = "magma", direction = -1) +
-#    geom_vline(aes(xintercept = 31)) +
-#    geom_text(aes(x = 31, y = 7, label = "Dec"), nudge_x = -2, angle = 90) +
-#    geom_text(aes(x = 31, y = 7, label = "Jan"), nudge_x = 1, angle = 90) +
-#    scale_y_continuous(limits = c(7, 37), breaks = (seq(0, 40, 5))) +
-#    labs(subtitle = "Greenish Warbler"))) +
-# plot_annotation(title = "Variation of first arrival and last departure dates with latitude",
-#                 subtitle = "Using proportion of max. reporting frequency per latitude to judge passage and wintering") -> arrdep_proprf
-# 
-# ggsave("01_prelim_figs/02_arrdep_proprf.png", plot = arrdep_proprf,
-#        width = 15, height = 8, units = "in")
-
 
 ```
 
@@ -237,8 +145,22 @@ x <- data2 %>%
   #                          DATE.TYPE == "DEP" & SLOPE < 0 ~ 1,
   #                          TRUE ~ SLOPE))
 
-lm(LAT.BOX - 8 ~ 0 + DAY.MY,
+lm(LAT.BOX - 5 ~ 0 + WEEK.MY,
    data = data2 %>% filter(COMMON.NAME == "Greenish Warbler", DATE.TYPE == "DEP"))
+
+x <- data2 %>% 
+  # filter(COMMON.NAME == "Greenish Warbler", DATE.TYPE == "DEP") %>%
+  # filter(COMMON.NAME == "Brown-breasted Flycatcher", DATE.TYPE == "DEP") %>% 
+  # filter(COMMON.NAME == "Brown Shrike", DATE.TYPE == "DEP") %>% 
+  group_by(COMMON.NAME, DATE.TYPE) %>%
+  # reframe(TAU = cor.test(LAT.BOX, DAY.MY, method = "kendall")$estimate) %>% 
+  reframe(PW.DIST.MEAN = stats::dist(DAY.MY) %>% as.numeric() %>% mean(),
+          PW.DIST.SD = stats::dist(DAY.MY) %>% as.numeric() %>% sd()) %>% 
+  # reframe(SLOPE = (first(LAT.SCALE) - last(LAT.SCALE))/(first(DAY.SCALE) - last(DAY.SCALE))) %>% 
+  print(n = 100)
+
+summary(x$PW.DIST)
+summary(1/x$PW.DIST)
 
 ```
 
