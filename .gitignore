@@ -12,6 +12,7 @@
 *.pdf
 *.txt
 *.zip
+ebd_users_GA*
 
 # folders in repo
 bin/

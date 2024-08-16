@@ -1,0 +1,244 @@
+---
+title: "Relationship between wintering latitude and arrival/departure timings of migratory birds"
+date: "2024/08/15"
+author: "Karthik Thrikkadeeri"
+editor_options: 
+  chunk_output_type: console
+bibliography: migration-timings-latitude.bib
+link-citations: yes
+output: 
+  html_document:
+    number_sections: false  
+    theme: united  
+    highlight: tango  # specifies the syntax highlighting style
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(lubridate)
+library(patchwork)
+# library(boot)
+# library(MASS)
+
+
+source("scripts/functions.R")
+
+theme_set(theme_bw())
+
+# migration_palette <- c("#1B9E77", "#E89005", "#EF4050", "#9678B6")
+
+knitr::opts_chunk$set(echo = FALSE, warnings = FALSE, 
+                      messages = FALSE, cache.lazy = FALSE)
+
+```
+
+```{r data_filt, cache=TRUE}
+
+# rawpath <- "data/ebd_IN_relFeb-2022.txt"
+# senspath <- "data/ebd_sensitive_relDec-2021_IN.txt"
+# groupaccspath <- "data/ebd_users_GA_relDec-2021.csv"
+
+# load("data/ebd_IN_relJan-2022.RData")
+
+# # processing the data for current use (34 mins) # ~ 2h on 2024
+# data <- data_process(rawpath, senspath, data) 
+
+# # cleaning and filtering for data quality (7 mins)
+# data <- dataqual_filt(data, groupaccspath, maxvel = 20, minsut = 2)
+
+
+# # prepare dataset with species and metrics of interest 
+# prep_data_spec(data)
+
+
+load("data/dataforanalysis.RData")
+
+
+if(!dir.exists("02_explor_figs/")) {
+  dir.create("02_explor_figs/", recursive = TRUE)
+}
+
+```
+
+# Introduction
+
+***This notebook is the exploratory analysis notebook for the study. Here, I explore, mainly via visualisations, interesting patterns in arrival and departure times of some migratory bird species changing with their wintering latitudes.***
+
+## Questions
+
+# Exploration
+
+## Investigating arrival and departure timings
+
+```{r, cache=FALSE, message=FALSE}
+
+data1 <- data_full %>% 
+  mutate(DAY.MY = if_else(DAY.Y > 147, DAY.Y-147, max(DAY.Y) - (147-DAY.Y))) |> 
+  group_by(COMMON.NAME, LAT.BOX) %>% 
+  distinct(GROUP.ID, .keep_all = TRUE) %>% 
+  summarise(N = n(),
+            ARR = unname(quantile(DAY.MY, probs = 0.025, type = 1)), 
+            DEP = unname(quantile(DAY.MY, probs = 0.975, type = 1))) %>% 
+  pivot_longer(cols = ARR:DEP,
+               names_to = "DATE.TYPE", values_to = "DAY.MY") %>% 
+  mutate(DATE.TYPE = factor(DATE.TYPE, levels = c("DEP","ARR"))) |> 
+  # join week info
+  left_join(data_full |> 
+              mutate(DAY.MY = if_else(DAY.Y > 147, DAY.Y-147, max(DAY.Y) - (147-DAY.Y))) |> 
+              distinct(DAY.MY, WEEK.MY),
+            by = "DAY.MY")
+
+
+arrdep_quan <- ggplot(data1 |> 
+  filter(COMMON.NAME %in% c("Blyth's Reed Warbler", "Greenish Warbler", 
+                            "Brown-breasted Flycatcher", "Brown Shrike", "Bank Swallow",
+                            "Booted Eagle")),
+  aes(x = DAY.MY, y = LAT.BOX, colour = DATE.TYPE)) + 
+  theme(strip.placement = "outside") +
+  geom_point(size = 3) +
+  geom_smooth(method = "lm", se = TRUE) +
+  scale_colour_manual(values = c("#b22222","#006994")) +
+  geom_vline(aes(xintercept = 217)) +
+  geom_text(aes(x = 217, y = 10, label = "Dec", colour = NA), nudge_x = -14, angle = 90) +
+  geom_text(aes(x = 217, y = 10, label = "Jan", colour = NA), nudge_x = 7, angle = 90) +
+  # facet_grid(cols = vars(DATE.TYPE), rows = vars(COMMON.NAME)) +
+  facet_wrap(~ COMMON.NAME, ncol = 1) +
+  scale_y_continuous(breaks = (seq(0, 40, 5))) +
+  labs(title = "Variation of first arrival and last departure dates with latitude",
+       subtitle = "Using quantiles of weekly records per latitude to assign arrival and departure") +
+  # coord_flip() +
+  theme(legend.position = "none")
+
+arrdep_quan
+
+ggsave("02_explor_figs/01_arrdep_quan.png", plot = arrdep_quan,
+       width = 13, height = 7, units = "in")
+
+
+
+# palette1 <- c("#6D9C94", "#F8EF8C", "#512D38") # like a dull viridis
+# palette2 <- c("#F0F2EF", "#5C5346")
+# 
+# 
+# data3 <- data0 %>% 
+#   group_by(COMMON.NAME, LAT.BOX) %>% 
+#   filter(round(REP.FREQ, 2) %in% seq(0.00, 0.75, 0.01)) %>%
+#   ungroup() %>% 
+#   distinct(COMMON.NAME, LAT.BOX, WEEK.MY, REP.FREQ)
+# 
+# ((ggplot(filter(data3, COMMON.NAME == "Blyth's Reed Warbler")) +
+#     geom_point(aes(x = WEEK.MY, y = LAT.BOX, colour = REP.FREQ), size = 3) +
+#     scale_colour_gradientn(colours = palette2) +
+#     # scale_colour_viridis_c(option = "magma", direction = -1) +
+#     geom_vline(aes(xintercept = 31)) +
+#     geom_text(aes(x = 31, y = 7, label = "Dec"), nudge_x = -2, angle = 90) +
+#     geom_text(aes(x = 31, y = 7, label = "Jan"), nudge_x = 1, angle = 90) +
+#     scale_y_continuous(limits = c(7, 37), breaks = (seq(0, 40, 5))) +
+#     labs(subtitle = "Blyth's Reed Warbler")) |
+# (ggplot(filter(data3, COMMON.NAME == "Brown-breasted Flycatcher")) +
+#    geom_point(aes(x = WEEK.MY, y = LAT.BOX, colour = REP.FREQ), size = 3) +
+#    scale_colour_gradientn(colours = palette2) +
+#    # scale_colour_viridis_c(option = "magma", direction = -1) +
+#    geom_vline(aes(xintercept = 31)) +
+#    geom_text(aes(x = 31, y = 7, label = "Dec"), nudge_x = -2, angle = 90) +
+#    geom_text(aes(x = 31, y = 7, label = "Jan"), nudge_x = 1, angle = 90) +
+#    scale_y_continuous(limits = c(7, 37), breaks = (seq(0, 40, 5))) +
+#    labs(subtitle = "Brown-breasted Flycatcher")) |
+# (ggplot(filter(data3, COMMON.NAME == "Greenish Warbler")) +
+#    geom_point(aes(x = WEEK.MY, y = LAT.BOX, colour = REP.FREQ), size = 3) +
+#    scale_colour_gradientn(colours = palette2) +
+#    # scale_colour_viridis_c(option = "magma", direction = -1) +
+#    geom_vline(aes(xintercept = 31)) +
+#    geom_text(aes(x = 31, y = 7, label = "Dec"), nudge_x = -2, angle = 90) +
+#    geom_text(aes(x = 31, y = 7, label = "Jan"), nudge_x = 1, angle = 90) +
+#    scale_y_continuous(limits = c(7, 37), breaks = (seq(0, 40, 5))) +
+#    labs(subtitle = "Greenish Warbler"))) +
+# plot_annotation(title = "Variation of first arrival and last departure dates with latitude",
+#                 subtitle = "Using weekly reporting frequencies to judge passage and wintering") -> arrdep_rf
+# 
+# ggsave("01_prelim_figs/02_arrdep_rf_palette2.png", plot = arrdep_rf,
+#        width = 15, height = 8, units = "in")
+# 
+# 
+# 
+# # should probably use proportion of max rep.freq. to colour than just rep.freq.
+# 
+# data4 <- data0 %>% 
+#   distinct(COMMON.NAME, LAT.BOX, WEEK.MY, REP.FREQ) %>% 
+#   group_by(COMMON.NAME, LAT.BOX) %>%
+#   mutate(MAX.RF = max(REP.FREQ)) %>% 
+#   group_by(COMMON.NAME, LAT.BOX, MAX.RF, WEEK.MY) %>% 
+#   summarise(REP.FREQ = REP.FREQ,
+#             PROP.RF = REP.FREQ/MAX.RF) %>% 
+#   ungroup()
+# 
+# ((ggplot(filter(data4, COMMON.NAME == "Blyth's Reed Warbler")) +
+#     geom_point(aes(x = WEEK.MY, y = LAT.BOX, colour = PROP.RF), size = 3) +
+#     scale_colour_gradientn(colours = palette2) +
+#     # scale_colour_viridis_c(option = "magma", direction = -1) +
+#     geom_vline(aes(xintercept = 31)) +
+#     geom_text(aes(x = 31, y = 7, label = "Dec"), nudge_x = -2, angle = 90) +
+#     geom_text(aes(x = 31, y = 7, label = "Jan"), nudge_x = 1, angle = 90) +
+#     scale_y_continuous(limits = c(7, 37), breaks = (seq(0, 40, 5))) +
+#     labs(subtitle = "Blyth's Reed Warbler")) |
+# (ggplot(filter(data4, COMMON.NAME == "Brown-breasted Flycatcher")) +
+#    geom_point(aes(x = WEEK.MY, y = LAT.BOX, colour = PROP.RF), size = 3) +
+#    scale_colour_gradientn(colours = palette2) +
+#    # scale_colour_viridis_c(option = "magma", direction = -1) +
+#    geom_vline(aes(xintercept = 31)) +
+#    geom_text(aes(x = 31, y = 7, label = "Dec"), nudge_x = -2, angle = 90) +
+#    geom_text(aes(x = 31, y = 7, label = "Jan"), nudge_x = 1, angle = 90) +
+#    scale_y_continuous(limits = c(7, 37), breaks = (seq(0, 40, 5))) +
+#    labs(subtitle = "Brown-breasted Flycatcher")) |
+# (ggplot(filter(data4, COMMON.NAME == "Greenish Warbler")) +
+#    geom_point(aes(x = WEEK.MY, y = LAT.BOX, colour = PROP.RF), size = 3) +
+#    scale_colour_gradientn(colours = palette2) +
+#    # scale_colour_viridis_c(option = "magma", direction = -1) +
+#    geom_vline(aes(xintercept = 31)) +
+#    geom_text(aes(x = 31, y = 7, label = "Dec"), nudge_x = -2, angle = 90) +
+#    geom_text(aes(x = 31, y = 7, label = "Jan"), nudge_x = 1, angle = 90) +
+#    scale_y_continuous(limits = c(7, 37), breaks = (seq(0, 40, 5))) +
+#    labs(subtitle = "Greenish Warbler"))) +
+# plot_annotation(title = "Variation of first arrival and last departure dates with latitude",
+#                 subtitle = "Using proportion of max. reporting frequency per latitude to judge passage and wintering") -> arrdep_proprf
+# 
+# ggsave("01_prelim_figs/02_arrdep_proprf.png", plot = arrdep_proprf,
+#        width = 15, height = 8, units = "in")
+
+
+```
+
+Arrival and departure timings have been obtained using quantiles (see fig). Now calculating migration metrics such as norther/southern arrival & departure, and synchronicity.
+
+```{r, cache=FALSE, message=FALSE}
+
+data2 <- data1 %>% 
+  group_by(COMMON.NAME, DATE.TYPE) %>% 
+  arrange(COMMON.NAME, DATE.TYPE, desc(LAT.BOX)) %>% 
+  mutate(NORTH.DAY = first(DAY.MY),
+         NORTH.WEEK = first(WEEK.MY),
+         SOUTH.DAY = last(DAY.MY),
+         SOUTH.WEEK = last(WEEK.MY)) %>% 
+  # scaling DAY.MY between north and south 
+  # mutate(DAY.SCALE = case_when(DATE.TYPE == "ARR" ~ DAY.MY - NORTH.DAY,
+  #                              DATE.TYPE == "DEP" ~ DAY.MY - SOUTH.DAY))
+  # mutate(DAY.SCALE = case_when(DATE.TYPE == "ARR" ~ DAY.MY - min(DAY.MY),
+  #                              DATE.TYPE == "DEP" ~ DAY.MY - min(DAY.MY)))
+  mutate(DAY.SCALE = scale(DAY.MY)[,1],
+         LAT.SCALE = scale(LAT.BOX)[,1])
+
+x <- data2 %>% 
+  group_by(COMMON.NAME, DATE.TYPE) %>% 
+  reframe(SLOPE = lm(LAT.BOX ~ 0 + DAY.MY, 
+                     offset = rep(min(LAT.BOX), n()),
+                     data = cur_group())$coef[1]) 
+  # # truncating arrivals and departure to one direction
+  # mutate(SLOPE = case_when(DATE.TYPE == "ARR" & SLOPE > 0 ~ -1,
+  #                          DATE.TYPE == "DEP" & SLOPE < 0 ~ 1,
+  #                          TRUE ~ SLOPE))
+
+lm(LAT.BOX - 8 ~ 0 + DAY.MY,
+   data = data2 %>% filter(COMMON.NAME == "Greenish Warbler", DATE.TYPE == "DEP"))
+
+```
+

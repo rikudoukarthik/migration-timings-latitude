@@ -67,8 +67,6 @@ load("data/data0.RData")
 
 # Exploration
 
-Explorations from before I joined BCI:
-
 ## Plain visualisation of migration timings with latitudes 
 
 ```{r 01_reports, cache=TRUE, message=FALSE}
