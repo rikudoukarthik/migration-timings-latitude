@@ -260,3 +260,108 @@ prep_data_spec <- function(data){
         file = "data/dataforanalysis.RData")
   
 }
+
+# calculate synchronicity measures --------------------------------------------------
+
+calc_sync_meas <- function(data_grouped) {
+  
+  # initial trials 
+  
+  # reframe(TAU = cor.test(LAT.BOX, DAY.MY, method = "kendall")$estimate) %>% 
+  # reframe(PW.DIST.MEAN = stats::dist(DAY.MY) %>% as.numeric() %>% mean(),
+  #         PW.DIST.SD = stats::dist(DAY.MY) %>% as.numeric() %>% sd()) %>% 
+  # reframe(SLOPE = (first(LAT.SCALE) - last(LAT.SCALE))/(first(DAY.SCALE) - last(DAY.SCALE))) %>% 
+  # R2 = (lm(DAY.MY ~ LAT.BOX, data = cur_group()) %>% summary())$r.squared,
+  
+  data_calc <- data_grouped %>% 
+    reframe(SLOPE = summary(lm(DAY.MY ~ LAT.BOX, data = cur_group()))$coef[2, 1],
+            SE = summary(lm(DAY.MY ~ LAT.BOX, data = cur_group()))$coef[2, 2]) %>% 
+    mutate(
+      SYNC.SLOPE = ((1/SLOPE) %>% abs() %>% log() %>% scale())[,1], # quickness
+      SYNC.TIGHT = -log(SE) # uniformity
+    ) 
+  
+  return(data_calc)
+  
+}
+
+
+# plot lat on Y and day on X --------------------------------------------------------
+
+gg_lat_day <- function(data, date_type, ill = TRUE, sync = FALSE) {
+  
+  col_theme <- if (date_type == "ARR") "#006994" else if (date_type == "DEP") "#b22222"
+  
+  text_y <- if (date_type == "ARR") 60 else if (date_type == "DEP") 260
+  text_x <- if (date_type == "ARR") 15 else if (date_type == "DEP") 30
+
+  
+  data_filt <- data %>% 
+    filter(DATE.TYPE == date_type) %>% 
+    {if (sync == TRUE) {
+      arrange(., SYNC.SLOPE, SYNC.TIGHT)
+    } else {
+      .
+    }}
+  
+  
+  plot <- data_filt %>% 
+    # arrange in order of synchronicity
+    {if (sync == TRUE) {
+      mutate(.,
+             COMMON.NAME = factor(COMMON.NAME, levels = unique(data_filt$COMMON.NAME)),
+             TEXT.LABEL = glue(
+               "Quick = {round(SYNC.SLOPE, 3)}\nTight = {round(SYNC.TIGHT, 3)}"
+               ))
+    } else {
+      .
+    }} %>% 
+    {if (ill == TRUE) {
+      filter(., COMMON.NAME %in% illust_species)
+    } else {
+      .
+    }} %>% 
+    ggplot(aes(x = LAT.BOX, y = DAY.MY)) + 
+    theme(strip.placement = "outside") +
+    geom_point(size = 2, alpha = 0.75, col = col_theme, fill = col_theme) +
+    geom_smooth(method = "lm", se = TRUE, col = "black", fill = "black") +
+    {if (sync == TRUE) {
+      geom_text(mapping = aes(x = text_x, y = text_y, label = TEXT.LABEL), size = 3)
+    }} +
+    facet_wrap(~ COMMON.NAME, 
+               nrow = if (ill == TRUE) 5 else 9) +
+    scale_x_continuous(breaks = seq(0, 40, 5)) +
+    scale_y_continuous(breaks = seq(0, 400, 30)) +
+    coord_flip() 
+    
+  return(plot)
+  
+}
+
+# get relative weights from PCA -----------------------------------------------------
+
+get_pca_prop <- function(data) {
+  
+  # variables should be rows and samples should be columns
+  sync_mat <- data %>% 
+    mutate(SPEC.MIG = glue("{DATE.TYPE}_{COMMON.NAME}")) %>% 
+    dplyr::select(SPEC.MIG, SYNC.SLOPE, SYNC.TIGHT) %>% 
+    pivot_longer(cols = c("SYNC.SLOPE", "SYNC.TIGHT"), 
+                 names_to = "SYNC.VAR", values_to = "VALUES") %>% 
+    pivot_wider(names_from = "SPEC.MIG", values_from = "VALUES") %>% 
+    mutate(across(c(everything(), -SYNC.VAR), ~ as.numeric(.))) %>% 
+    as.matrix()
+  
+  rownames(sync_mat) <- sync_mat[, 1]
+  sync_mat <- sync_mat[, -1]
+  class(sync_mat) <- "numeric"
+  
+  sync_pca <- prcomp(t(sync_mat), scale = TRUE)
+  
+  sync_var <- sync_pca$sdev^2
+  sync_var_prop <- round(sync_var/sum(sync_var), 3)
+  
+  return(sync_var_prop)
+  
+}
+

@@ -4,7 +4,7 @@ date: "2024/08/15"
 author: "Karthik Thrikkadeeri"
 editor_options: 
   chunk_output_type: console
-bibliography: migration-timings-latitude.bib
+# bibliography: migration-timings-latitude.bib
 link-citations: yes
 output: 
   html_document:
@@ -15,15 +15,15 @@ output:
 
 ```{r setup, include=FALSE}
 library(tidyverse)
+library(glue)
 library(lubridate)
 library(patchwork)
-# library(boot)
-# library(MASS)
+library(vegan)
 
 
 source("scripts/functions.R")
 
-theme_set(theme_bw())
+theme_set(theme_classic())
 
 # migration_palette <- c("#1B9E77", "#E89005", "#EF4050", "#9678B6")
 
@@ -70,6 +70,10 @@ if(!dir.exists("02_explor_figs/")) {
 
 ## Investigating arrival and departure timings
 
+After all our selection and filtering criteria for wintering species of interest, and after filtering data for each species to its wintering latitudinal range (removing latitudes where not purely wintering), we now start the analysis.
+
+Using quantiles (assuming 95%), we determine "true" arrival and departure dates for each species per latitude. For a preliminary visualisation of patterns across species, we visualise this latitudinal trend of arrival (blue) & departure (red) times for all species:
+
 ```{r, cache=FALSE, message=FALSE}
 
 data1 <- data_full %>% 
@@ -89,106 +93,152 @@ data1 <- data_full %>%
             by = "DAY.MY")
 
 
-arrdep_quan <- ggplot(data1 |> 
-  filter(COMMON.NAME %in% c("Blyth's Reed Warbler", "Greenish Warbler", "Green Warbler",
-                            "Brown-breasted Flycatcher", "Brown Shrike", "Bar-headed Goose",
-                            "Booted Eagle", "Bank Swallow")),
-  aes(x = DAY.MY, y = LAT.BOX, colour = DATE.TYPE)) + 
-  theme(strip.placement = "outside") +
-  geom_point(size = 3) +
-  geom_smooth(method = "lm", se = TRUE) +
-  scale_colour_manual(values = c("#b22222","#006994")) +
-  geom_vline(aes(xintercept = 217)) +
-  geom_text(aes(x = 217, y = 10, label = "Dec", colour = NA), nudge_x = -14, angle = 90) +
-  geom_text(aes(x = 217, y = 10, label = "Jan", colour = NA), nudge_x = 7, angle = 90) +
-  # facet_grid(cols = vars(DATE.TYPE), rows = vars(COMMON.NAME)) +
-  facet_wrap(~ COMMON.NAME, ncol = 2) +
-  scale_y_continuous(breaks = (seq(0, 40, 5))) +
-  labs(title = "Variation of first arrival and last departure dates with latitude",
-       subtitle = "Using quantiles of weekly records per latitude to assign arrival and departure") +
-  # coord_flip() +
-  theme(legend.position = "none")
+illust_species <- c("Blyth's Reed Warbler", "Lesser Whitethroat", "Sykes's Warbler",
+                    "Greenish Warbler", "Green Warbler", "Common Chiffchaff",
+                    "Brown-breasted Flycatcher", "Black Redstart", "Brown-headed Gull", 
+                    "Brown Shrike", "Bar-headed Goose", "Booted Eagle", "Common Buzzard", 
+                    "Eurasian Wigeon", "Tufted Duck", "Bar-tailed Godwit", 
+                    "Greater Spotted Eagle", "Cinereous Vulture", "Gray Wagtail", 
+                    "Pallid Harrier", "Siberian Stonechat", "Spotted Redshank", 
+                    "Western Yellow Wagtail", "Taiga Flycatcher", "Red-breasted Flycatcher")
 
-arrdep_quan
 
-ggsave("02_explor_figs/01_arrdep_quan.png", plot = arrdep_quan,
-       width = 13, height = 7, units = "in")
+plot_arr <- data1 %>% gg_lat_day("ARR", FALSE, sync = FALSE)
+plot_dep <- data1 %>% gg_lat_day("DEP", FALSE, sync = FALSE)
+
+# plot_arrdep <- plot_arr / plot_dep +
+#   plot_annotation(
+#     title = "Variation of first arrival and last departure dates with latitude",
+#     subtitle = "Using quantiles of weekly records per latitude to assign arrival and departure"
+#     )
+
+ggsave("02_explor_figs/01_arr.png", plot = plot_arr,
+       width = 20, height = 15, units = "in")
+ggsave("02_explor_figs/01_dep.png", plot = plot_dep,
+       width = 20, height = 15, units = "in")
+
+knitr::include_graphics("02_explor_figs/01_arr.png")
+knitr::include_graphics("02_explor_figs/01_dep.png")
 
 ```
 
-Arrival and departure timings have been obtained using quantiles (see fig). Now calculating migration metrics such as norther/southern arrival & departure, and synchronicity.
+We now calculate metrics for migration timings, such as first northern/southern arrival & departure, and synchronicity which is our primary metric of interest. We describe synchronicity using two (presumably) orthogonal angles: slope (quickness of migration) and tightness (uniformity) across latitudes. (Correlation R^2 cannot be used for the measure of tightness, since for high slope values, R2 becomes low.)
+
+Here are the synchronicity measures (`SYNC.SLOPE` & `SYNC.TIGHT`) for a set of illustrative species, followed by updated plots for the same species.
 
 ```{r, cache=FALSE, message=FALSE}
 
-data2 <- data1 %>% 
+mig_spec_info <- data1 %>% 
   group_by(COMMON.NAME, DATE.TYPE) %>% 
   arrange(COMMON.NAME, DATE.TYPE, desc(LAT.BOX)) %>% 
+  # first northern/southern arrival & departure dates
   mutate(NORTH.DAY = first(DAY.MY),
          NORTH.WEEK = first(WEEK.MY),
          SOUTH.DAY = last(DAY.MY),
          SOUTH.WEEK = last(WEEK.MY)) %>% 
-  # scaling DAY.MY between north and south 
-  # mutate(DAY.SCALE = case_when(DATE.TYPE == "ARR" ~ DAY.MY - NORTH.DAY,
-  #                              DATE.TYPE == "DEP" ~ DAY.MY - SOUTH.DAY))
-  # mutate(DAY.SCALE = case_when(DATE.TYPE == "ARR" ~ DAY.MY - min(DAY.MY),
-  #                              DATE.TYPE == "DEP" ~ DAY.MY - min(DAY.MY)))
-  mutate(DAY.SCALE = scale(DAY.MY)[,1],
-         LAT.SCALE = scale(LAT.BOX)[,1])
+  # measures of synchronicity
+  calc_sync_meas() 
 
-x <- data2 %>% 
-  group_by(COMMON.NAME, DATE.TYPE) %>% 
-  reframe(SLOPE = lm(LAT.BOX ~ 0 + DAY.MY, 
-                     offset = rep(min(LAT.BOX), n()),
-                     data = cur_group())$coef[1]) 
-  # # truncating arrivals and departure to one direction
-  # mutate(SLOPE = case_when(DATE.TYPE == "ARR" & SLOPE > 0 ~ -1,
-  #                          DATE.TYPE == "DEP" & SLOPE < 0 ~ 1,
-  #                          TRUE ~ SLOPE))
-
-lm(LAT.BOX - 5 ~ 0 + WEEK.MY,
-   data = data2 %>% filter(COMMON.NAME == "Greenish Warbler", DATE.TYPE == "DEP"))
-
-x <- data2 %>% 
-  # filter(COMMON.NAME == "Greenish Warbler", DATE.TYPE == "DEP") %>%
-  # filter(COMMON.NAME == "Brown-breasted Flycatcher", DATE.TYPE == "DEP") %>% 
-  # filter(COMMON.NAME == "Brown Shrike", DATE.TYPE == "DEP") %>% 
-  group_by(COMMON.NAME, DATE.TYPE) %>%
-  # reframe(TAU = cor.test(LAT.BOX, DAY.MY, method = "kendall")$estimate) %>% 
-  reframe(PW.DIST.MEAN = stats::dist(DAY.MY) %>% as.numeric() %>% mean(),
-          PW.DIST.SD = stats::dist(DAY.MY) %>% as.numeric() %>% sd()) %>% 
-  # reframe(SLOPE = (first(LAT.SCALE) - last(LAT.SCALE))/(first(DAY.SCALE) - last(DAY.SCALE))) %>% 
+mig_spec_info %>% 
+  filter(COMMON.NAME %in% illust_species) %>% 
+  arrange(DATE.TYPE, SYNC.SLOPE, SYNC.TIGHT) %>% 
   print(n = 100)
 
-summary(x$PW.DIST)
-summary(1/x$PW.DIST)
 
-data1 %>% 
-  filter(DATE.TYPE == "ARR",
-         COMMON.NAME %in% c("Blyth's Reed Warbler", "Greenish Warbler", "Green Warbler",
-                            "Brown-breasted Flycatcher", "Brown Shrike", "Bar-headed Goose",
-                            "Booted Eagle", "Bank Swallow")) %>% 
-  ggplot(aes(x = LAT.BOX, y = DAY.MY)) + 
-  theme(strip.placement = "outside") +
-  geom_point(size = 3) +
-  geom_smooth(method = "lm", se = TRUE) +
-  facet_wrap(~ COMMON.NAME, ncol = 2) +
-  scale_x_continuous(breaks = (seq(0, 40, 5))) +
-  coord_flip() +
-  theme(legend.position = "none")
+# join migration metrics back to data and plot same first graphs
+data2 <- data1 %>% 
+  left_join(mig_spec_info, by = c("COMMON.NAME", "DATE.TYPE")) %>% 
+  arrange(DATE.TYPE, SYNC.SLOPE, SYNC.TIGHT)
 
-data1 %>% 
-  filter(DATE.TYPE == "DEP",
-         COMMON.NAME %in% c("Blyth's Reed Warbler", "Greenish Warbler", "Green Warbler",
-                            "Brown-breasted Flycatcher", "Brown Shrike", "Bar-headed Goose",
-                            "Booted Eagle", "Bank Swallow")) %>% 
-  ggplot(aes(x = LAT.BOX, y = DAY.MY)) + 
-  theme(strip.placement = "outside") +
-  geom_point(size = 3) +
-  geom_smooth(method = "lm", se = TRUE) +
-  facet_wrap(~ COMMON.NAME, ncol = 2) +
-  scale_x_continuous(breaks = (seq(0, 40, 5))) +
-  coord_flip() +
-  theme(legend.position = "none")
+
+plot_arr <- data2 %>% gg_lat_day("ARR", TRUE, sync = TRUE)
+plot_dep <- data2 %>% gg_lat_day("DEP", TRUE, sync = TRUE)
+
+ggsave("02_explor_figs/02_arr_sync.png", plot = plot_arr,
+       width = 15, height = 15, units = "in")
+ggsave("02_explor_figs/02_dep_sync.png", plot = plot_dep,
+       width = 15, height = 15, units = "in")
+
+knitr::include_graphics("02_explor_figs/02_arr_sync.png")
+knitr::include_graphics("02_explor_figs/02_dep_sync.png")
 
 ```
 
+All our species can be visualised as occupying a 2-D space governed by the two measures of synchronicity. Based on their occupancy of this space, we can classify their overall synchronicity. 
+
+```{r}
+
+plot_syncspace <- mig_spec_info %>% 
+  # silencing labels of species except our illustrative ones
+  mutate(LABEL = case_when(COMMON.NAME %in% illust_species ~ COMMON.NAME,
+                           TRUE ~ "")) %>% 
+  ggplot(aes(SYNC.SLOPE, SYNC.TIGHT, group = COMMON.NAME, colour = DATE.TYPE)) +
+  geom_point() +
+  geom_text(aes(label = LABEL), size = 3, position = "jitter") +
+  facet_wrap(~ DATE.TYPE, ncol = 1) +
+  scale_x_continuous(breaks = seq(-5, 5, 1)) +
+  scale_color_manual(values = c("#b22222", "#006994")) +
+  theme(panel.grid.major = element_line(colour = "grey90"),
+        legend.position = "none")
+
+ggsave("02_explor_figs/02_sync_space.png", plot = plot_syncspace,
+       width = 10, height = 20, units = "in")
+
+knitr::include_graphics("02_explor_figs/02_sync_space.png")
+
+```
+
+Now will try to combine the two variables into a single index of synchronicity. Relative weights are obtained from PCA of the two variables, and the index is a linear combination of the two. New values and updated graphs below.
+
+```{r}
+
+
+sync_props <- get_pca_prop(mig_spec_info)
+
+# mig_spec_info %>% 
+#   # silencing labels of species except our illustrative ones
+#   mutate(LABEL = case_when(COMMON.NAME %in% illust_species ~ COMMON.NAME,
+#                            TRUE ~ ""),
+#          SYNC.TOT = 0.6*SYNC.SLOPE + 0.4*SYNC.TIGHT) %>% 
+#   ggplot(aes(SYNC.TOT, SYNC.TIGHT, group = COMMON.NAME, colour = DATE.TYPE)) +
+#   geom_point() +
+#   geom_text(aes(label = LABEL), size = 3, position = "jitter") +
+#   facet_wrap(~ DATE.TYPE, ncol = 1) +
+#   scale_x_continuous(breaks = seq(-5, 5, 1)) +
+#   scale_color_manual(values = c("#b22222", "#006994")) +
+#   theme(panel.grid.major = element_line(colour = "grey90"),
+#         legend.position = "none")
+
+# calculate new sync index with relative weights
+mig_spec_info <- mig_spec_info %>% 
+  mutate(SYNC.IND = sync_props[1]*SYNC.SLOPE + sync_props[2]*SYNC.TIGHT)
+
+mig_spec_info %>% 
+  filter(COMMON.NAME %in% illust_species) %>% 
+  arrange(DATE.TYPE, SYNC.IND) %>% 
+  relocate(COMMON.NAME, DATE.TYPE, SYNC.IND) %>% 
+  print(n = 100)
+
+
+# join migration metrics back to data and plot same first graphs
+data3 <- data1 %>% 
+  left_join(mig_spec_info, by = c("COMMON.NAME", "DATE.TYPE")) %>% 
+  arrange(DATE.TYPE, SYNC.IND) 
+
+
+plot_arr <- data3 %>% gg_lat_day("ARR", TRUE, sync = TRUE)
+plot_dep <- data3 %>% gg_lat_day("DEP", TRUE, sync = TRUE)
+
+ggsave("02_explor_figs/03_arr_sync_index.png", plot = plot_arr,
+       width = 15, height = 15, units = "in")
+ggsave("02_explor_figs/03_dep_sync_index.png", plot = plot_dep,
+       width = 15, height = 15, units = "in")
+
+knitr::include_graphics("02_explor_figs/03_arr_sync_index.png")
+knitr::include_graphics("02_explor_figs/03_dep_sync_index.png")
+
+```
+
+There is still some finetuning to be done with the "quickness" metric, i.e., derived from slope. For the most synchronous species with little difference, the values change drastically. Also need to figure out how to appropriately weight the two so that high togetherness is prioritised.
+
+Further try ordinations to understand what factors (wintering, migrating) determine synchronicity of species.
