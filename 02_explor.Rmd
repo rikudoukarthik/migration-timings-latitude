@@ -90,9 +90,9 @@ data1 <- data_full %>%
 
 
 arrdep_quan <- ggplot(data1 |> 
-  filter(COMMON.NAME %in% c("Blyth's Reed Warbler", "Greenish Warbler", "Bar-headed Goose",
-                            "Brown-breasted Flycatcher", "Brown Shrike", "Bank Swallow",
-                            "Booted Eagle")),
+  filter(COMMON.NAME %in% c("Blyth's Reed Warbler", "Greenish Warbler", "Green Warbler",
+                            "Brown-breasted Flycatcher", "Brown Shrike", "Bar-headed Goose",
+                            "Booted Eagle", "Bank Swallow")),
   aes(x = DAY.MY, y = LAT.BOX, colour = DATE.TYPE)) + 
   theme(strip.placement = "outside") +
   geom_point(size = 3) +
@@ -102,7 +102,7 @@ arrdep_quan <- ggplot(data1 |>
   geom_text(aes(x = 217, y = 10, label = "Dec", colour = NA), nudge_x = -14, angle = 90) +
   geom_text(aes(x = 217, y = 10, label = "Jan", colour = NA), nudge_x = 7, angle = 90) +
   # facet_grid(cols = vars(DATE.TYPE), rows = vars(COMMON.NAME)) +
-  facet_wrap(~ COMMON.NAME, ncol = 1) +
+  facet_wrap(~ COMMON.NAME, ncol = 2) +
   scale_y_continuous(breaks = (seq(0, 40, 5))) +
   labs(title = "Variation of first arrival and last departure dates with latitude",
        subtitle = "Using quantiles of weekly records per latitude to assign arrival and departure") +
@@ -161,6 +161,34 @@ x <- data2 %>%
 
 summary(x$PW.DIST)
 summary(1/x$PW.DIST)
+
+data1 %>% 
+  filter(DATE.TYPE == "ARR",
+         COMMON.NAME %in% c("Blyth's Reed Warbler", "Greenish Warbler", "Green Warbler",
+                            "Brown-breasted Flycatcher", "Brown Shrike", "Bar-headed Goose",
+                            "Booted Eagle", "Bank Swallow")) %>% 
+  ggplot(aes(x = LAT.BOX, y = DAY.MY)) + 
+  theme(strip.placement = "outside") +
+  geom_point(size = 3) +
+  geom_smooth(method = "lm", se = TRUE) +
+  facet_wrap(~ COMMON.NAME, ncol = 2) +
+  scale_x_continuous(breaks = (seq(0, 40, 5))) +
+  coord_flip() +
+  theme(legend.position = "none")
+
+data1 %>% 
+  filter(DATE.TYPE == "DEP",
+         COMMON.NAME %in% c("Blyth's Reed Warbler", "Greenish Warbler", "Green Warbler",
+                            "Brown-breasted Flycatcher", "Brown Shrike", "Bar-headed Goose",
+                            "Booted Eagle", "Bank Swallow")) %>% 
+  ggplot(aes(x = LAT.BOX, y = DAY.MY)) + 
+  theme(strip.placement = "outside") +
+  geom_point(size = 3) +
+  geom_smooth(method = "lm", se = TRUE) +
+  facet_wrap(~ COMMON.NAME, ncol = 2) +
+  scale_x_continuous(breaks = (seq(0, 40, 5))) +
+  coord_flip() +
+  theme(legend.position = "none")
 
 ```
 
