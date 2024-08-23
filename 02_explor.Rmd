@@ -4,8 +4,8 @@ date: "2024/08/15"
 author: "Karthik Thrikkadeeri"
 editor_options: 
   chunk_output_type: console
-# bibliography: migration-timings-latitude.bib
-link-citations: yes
+bibliography: migration-latitude.bib
+link-citations: true
 output: 
   html_document:
     number_sections: false  
@@ -62,15 +62,58 @@ if(!dir.exists("02_explor_figs/")) {
 
 # Introduction
 
-***This notebook is the exploratory analysis notebook for the study. Here, I explore, mainly via visualisations, interesting patterns in arrival and departure times of some migratory bird species changing with their wintering latitudes.***
+- Relationship between migration timings and latitude has received some attention, such as: In breeding ranges, how does latitude influence the migrant proportion of bird populations? i.e. whether or not a breeding bird migrates south. 
+- Studies on *when* migration occurs:
+    - Either on effect of breeding latitudes
+    - Various other env. variables affect migration timing, and how this changes with climate change [@saino2004, @gordo2005]
+    - Or asking how wintering latitudes affect timing of arrival in breeding grounds
+        - Species wintering in higher/temperate latitudes migrate (arrive in breeding range) earlier than tropical wintering ones. Breeding latitude does not have an effect. [@hagan1991]
+- Synchronicity of migration itself has received very little attention
+    - But from @hagan1991 we can retain the notion of synchronicity. According to those findings, the greater the latitudinal range occupied by a species in winter, the more asynchronous its migration will be. 
+    - The reality, and what we can see in our prelim explorations, is a bit more complex than that, of course. Not a linear relationship.
+    - But what exactly is the relationship between migration timings (special focus on synchronicity) and wintering latitudes (minima, median, breadth)? And what does the relationship imply ecologically?
+    - Also related to Zugunruhe, as suggested for *Phylloscopus* [@akesson2017]
+    - Longer-distance migrants more synchronous [@winger2024]
+
+Most migration studies heavily physiological, while our aim with this is more functional (traits-based). Macroecological perspective on seasonal flux of animal movement (different from tracking studies), allowing cross-species comparisons of broad-scale strategies in pace and geography of annual cycle stages. 
+
+We also have certain species whose entire global population winters in India (e.g., Blyth's Reed Warbler, Greenish Warbler). This is a good opportunity to gain understandings of global ecological (and conservation) significance. 
 
 ## Questions
 
+1. Cross-species comparisons:
+    1. Does winter arrival/departure timing depend on the species’s wintering latitude?
+    1. Does winter migration synchronicity depend on the species’s wintering latitude?
+    1. Do species migrating later in season tend to migrate more synchronously?
+    1. Is winter arrival/departure timing changing over the years (climate change)? 
+        - *As a final section, if relevant and feasible (low data, quantile method might fail.).*
+        - Or, instead can maybe try to correlate with temperature gradient across latitudes to speculate.
+1. Within-species comparisons:
+    1. Do species follow same synchronicity strategy for arrival and departure? (Symmetricity, see @winger2024)
+        1. Which do, and which don't (what determines this)?
+    1. Is synchronicity more likely/common in arrival than in departure or vice-versa?
+        - Many species have narrower window in spring than in fall [@winger2024 for references]
+        - In India (maybe unique) we have monsoon, so most species probably spend longer coming down due to availability of food in post-monsoon
+
+Northwest vs Himalayan routes
+
+**Metrics**:
+
+- Migration timing:
+    - True arrival/departure, not absolute (stragglers)
+    - Synchronicity
+- Wintering latitude:
+    - Minimum
+    - Median
+    - Extent/breadth/range
+
 # Exploration
 
-## Investigating arrival and departure timings
+*For high-res versions of images, go [here](https://github.com/rikudoukarthik/migration-timings-latitude/tree/d76f1d152a7d4a47c0dd823eeeef41757029d52a/02_explor_figs).*
 
-After all our selection and filtering criteria for wintering species of interest, and after filtering data for each species to its wintering latitudinal range (removing latitudes where not purely wintering), we now start the analysis.
+## Investigating arrival and departure timings & synchronicity
+
+After all our selection and filtering criteria for wintering species of interest (giving `r n_distinct(win_spec_info$COMMON.NAME)` species), and after filtering data for each species to its wintering latitudinal range (removing latitudes where not purely wintering), we now start the analysis.
 
 Using quantiles (assuming 95%), we determine "true" arrival and departure dates for each species per latitude. For a preliminary visualisation of patterns across species, we visualise this latitudinal trend of arrival (blue) & departure (red) times for all species:
 
@@ -166,7 +209,7 @@ knitr::include_graphics("02_explor_figs/02_dep_sync.png")
 
 All our species can be visualised as occupying a 2-D space governed by the two measures of synchronicity. Based on their occupancy of this space, we can classify their overall synchronicity. 
 
-```{r}
+```{r, cache=FALSE, message=FALSE}
 
 plot_syncspace <- mig_spec_info %>% 
   # silencing labels of species except our illustrative ones
@@ -188,9 +231,9 @@ knitr::include_graphics("02_explor_figs/02_sync_space.png")
 
 ```
 
-Now will try to combine the two variables into a single index of synchronicity. Relative weights are obtained from PCA of the two variables, and the index is a linear combination of the two. New values and updated graphs below.
+Now will try to combine the two variables into a single index of synchronicity. Relative weights are obtained from PCA of the two variables, and the index (`SYNC.IND`) is a linear combination of the two. New values and updated graphs below.
 
-```{r}
+```{r, cache=FALSE, message=FALSE}
 
 
 sync_props <- get_pca_prop(mig_spec_info)
@@ -216,7 +259,7 @@ mig_spec_info <- mig_spec_info %>%
 mig_spec_info %>% 
   filter(COMMON.NAME %in% illust_species) %>% 
   arrange(DATE.TYPE, SYNC.IND) %>% 
-  relocate(COMMON.NAME, DATE.TYPE, SYNC.IND) %>% 
+  dplyr::select(COMMON.NAME, DATE.TYPE, starts_with("SYNC.")) %>% 
   print(n = 100)
 
 
@@ -239,6 +282,6 @@ knitr::include_graphics("02_explor_figs/03_dep_sync_index.png")
 
 ```
 
-There is still some finetuning to be done with the "quickness" metric, i.e., derived from slope. For the most synchronous species with little difference, the values change drastically. Also need to figure out how to appropriately weight the two so that high togetherness is prioritised.
+Clearly, there is still some finetuning to be done with the "quickness" metric, i.e., derived from slope. For the most synchronous species with little difference between them, the values are drastically different. Also need to figure out how to appropriately weight the two so that high togetherness is prioritised.
 
 Further try ordinations to understand what factors (wintering, migrating) determine synchronicity of species.
