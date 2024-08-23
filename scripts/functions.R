@@ -338,6 +338,47 @@ gg_lat_day <- function(data, date_type, ill = TRUE, sync = FALSE) {
   
 }
 
+gg_lat_day_sync <- function(data, date_type, ill = TRUE) {
+  
+  col_theme <- if (date_type == "ARR") "#006994" else if (date_type == "DEP") "#b22222"
+  
+  text_y <- if (date_type == "ARR") 60 else if (date_type == "DEP") 260
+  text_x <- if (date_type == "ARR") 15 else if (date_type == "DEP") 30
+
+  
+  data_filt <- data %>% 
+    filter(DATE.TYPE == date_type) %>% 
+    {if (date_type == "ARR") {
+      arrange(., SYNC.IND)
+    } else if (date_type == "DEP") {
+      arrange(., desc(SYNC.IND))
+    }}
+
+  
+  plot <- data_filt %>% 
+    # arrange in order of synchronicity
+    mutate(COMMON.NAME = factor(COMMON.NAME, levels = unique(data_filt$COMMON.NAME)),
+           TEXT.LABEL = glue("Slope = {round(SYNC.IND, 3)}")) %>% 
+    {if (ill == TRUE) {
+      filter(., COMMON.NAME %in% illust_species)
+    } else {
+      .
+    }} %>% 
+    ggplot(aes(x = LAT.BOX, y = DAY.MY)) + 
+    theme(strip.placement = "outside") +
+    geom_point(size = 2, alpha = 0.75, col = col_theme, fill = col_theme) +
+    geom_smooth(method = "lm", se = TRUE, col = "black", fill = "black") +
+    geom_text(mapping = aes(x = text_x, y = text_y, label = TEXT.LABEL), size = 3) +
+    facet_wrap(~ COMMON.NAME, 
+               nrow = if (ill == TRUE) 5 else 9) +
+    scale_x_continuous(breaks = seq(0, 40, 5)) +
+    scale_y_continuous(breaks = seq(0, 400, 30)) +
+    coord_flip() 
+  
+  return(plot)
+  
+}
+
 # get relative weights from PCA -----------------------------------------------------
 
 get_pca_prop <- function(data) {
