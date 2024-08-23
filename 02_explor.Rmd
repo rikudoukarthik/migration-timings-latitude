@@ -5,11 +5,14 @@ author: "Karthik Thrikkadeeri"
 editor_options: 
   chunk_output_type: console
 bibliography: migration-latitude.bib
+csl: indianbirds_alpha.csl
 link-citations: true
 output: 
   html_document:
     number_sections: false  
-    theme: united  
+    toc: true
+    toc_depth: 3  
+    theme: flatly  
     highlight: tango  # specifies the syntax highlighting style
 ---
 
