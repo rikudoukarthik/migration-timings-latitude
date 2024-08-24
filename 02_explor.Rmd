@@ -1,5 +1,5 @@
 ---
-title: "Relationship between wintering latitude and arrival/departure timings of migratory birds"
+title: "Relationship between wintering latitude and migration synchronicity of Indian wintering birds"
 date: "2024/08/15"
 author: "Karthik Thrikkadeeri"
 editor_options: 
@@ -13,9 +13,10 @@ output:
     number_sections: false  
     toc: true
     toc_depth: 3  
-    theme: flatly  
-    highlight: pygments  # specifies the syntax highlighting style
+    theme: cosmo  
+    highlight: default  # specifies the syntax highlighting style
 ---
+<!-- rmarkdown::render("02_explor.Rmd") -->
 
 ```{r setup, include=FALSE}
 library(tidyverse)
@@ -66,54 +67,55 @@ if(!dir.exists("02_explor_figs/")) {
 
 # Introduction
 
-- Relationship between migration timings and latitude has received some attention, such as: In breeding ranges, how does latitude influence the migrant proportion of bird populations? i.e. whether or not a breeding bird migrates south. 
-- Studies on *when* migration occurs:
-    - Either on effect of breeding latitudes
-    - Various other env. variables affect migration timing, and how this changes with climate change [@saino2004, @gordo2005]
-    - Or asking how wintering latitudes affect timing of arrival in breeding grounds
-        - Species wintering in higher/temperate latitudes migrate (arrive in breeding range) earlier than tropical wintering ones. Breeding latitude does not have an effect. [@hagan1991]
-- Synchronicity of migration itself has received very little attention
-    - But from @hagan1991 we can retain the notion of synchronicity. According to those findings, the greater the latitudinal range occupied by a species in winter, the more asynchronous its migration will be. 
-    - The reality, and what we can see in our prelim explorations, is a bit more complex than that, of course. Not a linear relationship.
-    - But what exactly is the relationship between migration timings (special focus on synchronicity) and wintering latitudes (minima, median, breadth)? And what does the relationship imply ecologically?
-    - Also related to Zugunruhe, as suggested for *Phylloscopus* [@akesson2017]
-    - Longer-distance migrants more synchronous [@winger2024]
+- Latitudinal migration is a widespread phenomenon across animal taxa. There is a wide range of migration strategies employed by species, particularly regarding when and how they migrate.
+- Extent (range, distance) and fine-scale timing of latitudinal migration are well studied, but mostly put in context of vegetation phenology in breeding range [@briedis2020] or environmental conditions in wintering range [@saino2004; @gordo2005] or physiology [e.g., Gomez et al 2016, Zurell et al. 2018]. There has also been particular attention on how extent and timing of migration might be affected by climate change [@rushing2020].
+- Species migrating to equatorial/tropical latitudes, where environmental cues such as photoperiod are poor predictors of seasons, tend to rely more on their internal circannual clocks [@akesson2017; @wikelski2007; @liedvogel2011]. This aspect of migratory restlessness driven by species-specific internal clocks has been referred to as *Zugunruhe* [@gwinner1967; @gwinner1986].
+- However, a basic aspect of migration timing that has remained understudied is migration synchronicity. How quickly or slowly do species complete the occupation or evacuation (arrival or departure) of their wintering ranges? What determines which of these strategies a species employs? Why do some species spend longer occupying or vacating their nonbreeding range, while their close relatives spend much shorter times for these?
+- There is a great diversity in species-specific strategies employed in this regard, with some species seeming to arrive across their broad wintering range all at once and some others occupying their southern limits months after the northern limits. 
+- We know that such relationships between wintering latitude and migration timing are important (and more so than breeding latitude) [@hagan1991; @schmaljohann2018].
+- Migration synchronicity is thus an emergent species-level property that has implications for all geographies occupied by the species. e.g., for certain species, India hosts their entire global population in winter (Blyth's Reed Warbler, Greenish Warbler)---global ecological (and conservation) significance. 
+- Yet, much of this understanding of synchronicity remains anecodtal, unquantified, and without ecological context, particularly in countries like India. Such a macroecological understanding is difficult to obtain from studies of individual movement patterns, such as tracking studies.
+- India occupies a large area and forms the wintering range for a large number of bird species (cite SoIB maps?) (also multiple flyways). In addition, the unique biogeography of the peninsula (funnelling/tapering down to lower latitudes before ending with the ocean) offers a unique opportunity to test such macroecological hypotheses regarding the link between migration synchronicity and wintering latitudes. *(This part can be supported by a figure: map of India for two wintering months, latitudes binned and coloured based on density of no. of wintering/all species.)*
 
-Most migration studies heavily physiological, while our aim with this is more functional (traits-based). Macroecological perspective on seasonal flux of animal movement (different from tracking studies), allowing cross-species comparisons of broad-scale strategies in pace and geography of annual cycle stages. 
+## What we know
 
-We also have certain species whose entire global population winters in India (e.g., Blyth's Reed Warbler, Greenish Warbler). This is a good opportunity to gain understandings of global ecological (and conservation) significance. 
+At the finer scale of individual migrating birds, migration speed is closely linked to flight speed and/or stopover duration (rest, fuel) [@schmaljohann2018]. Translated to macroecological context, migration synchronicity can be associated with intrinsic species-specific factors as well as external factors like environmental and landscape features. The major internal factors possibly affecting synchronicity are species' morphological traits (affecting flight speed capability, such as dispersal ability, body size?), migration distance [@winger2024], and urgency of migration (related to within- and across-season differences in programming of internal clocks). On the other hand, external factors refer to the biogeomorphology of migration routes and wintering ranges, which influences food availability, interspecific competition, etc. and therefore influences how conducive various latitudes are to the fitness of the birds.
 
-## Questions
+There is evidence that the latter is more important [@schmaljohann2018; @nilsson2013; @lindstrom2003], even at the macroecological scale [@lasorte2016]. That is, external factors influencing aspects of foraging/fuelling are more important than intrinsic morphological or programmed factors like *Zugunruhe*. In India, this might be especially true for species taking the northwest vs Himalayan migration routes. In terms of both food availability and competition, the arid northwest region of India might be very conducive during the post-monsoon period (coinciding with arrival of winter migrants), due to the sudden burst in food availability coupled with lower competitive pressure due to lower local species richness. Thus, many species taking this route may spend longer coming down to reach the southern limit of their wintering range.
 
-1. Cross-species comparisons:
-    1. Does winter arrival/departure timing depend on the species’s wintering latitude?
-    1. Does winter migration synchronicity depend on the species’s wintering latitude?
-    1. Do species migrating later in season tend to migrate more synchronously?
-    1. Is winter arrival/departure timing changing over the years (climate change)? 
-        - *As a final section, if relevant and feasible (low data, quantile method might fail.).*
-        - Or, instead can maybe try to correlate with temperature gradient across latitudes to speculate.
-1. Within-species comparisons:
-    1. Do species follow same synchronicity strategy for arrival and departure? (Symmetricity, see @winger2024)
-        1. Which do, and which don't (what determines this)?
-    1. Is synchronicity more likely/common in arrival than in departure or vice-versa?
-        - Many species have narrower window in spring than in fall [@winger2024 for references]
-        - In India (maybe unique) we have monsoon, so most species probably spend longer coming down due to availability of food in post-monsoon
+We test these multiple theories using our dataset, with the following predictions (simple illustrative graphs can be created later):
 
-Northwest vs Himalayan routes
+1. If synchronicity is linked to species morphology, synchronicity increases with increasing flight capability (dispersal ability/HWI, body mass, ?)
+1. If synchronicity is determined by migration distance (geographical separation of breeding and non-breeding ranges), it:
+    1. increases with greater wintering latitudinal breadth (or with more southern minimum wintering latitude) *[this is an extension of below]*
+    1. increases with greater migration distance [@hagan1991; @winger2024] *[not sure if we want to test this]*
+1. If synchronicity is driven by urgency of migration, it:
+    1. increases with later migration start day [@hagan1991; @lack1950]
+    1. is greater during departures (spring migration) than in arrivals (autumn migration) [@winger2024; @schmaljohann2018; @nilsson2013]
+        <!-- - True for waders, gulls, swifts, and songbirds but opposite for waterfowl and owls [@schmaljohann2018] -->
+1. If synchronicity is related to biogeomorphological factors, synchronicity of arrivals (autumn migration) is lesser for species using the northwest route of entry and greater for those crossing the Himalaya, whereas synchronicity of departures (spring migration) is not notably different between the two.
+1. Null?
 
-**Metrics**:
+<!-- Other questions to answer briefly in results:
 
-- Migration timing:
-    - True arrival/departure, not absolute (stragglers)
-    - Synchronicity
-- Wintering latitude:
-    - Minimum
-    - Median
-    - Extent/breadth/range
+1. Does winter arrival/departure timing depend on the species’s wintering latitude?
+1. What is the most and least synchronicity and by which species?
+1. Do species follow same synchronicity strategy for arrival and departure? (Symmetricity, see @winger2024) -->
+
 
 # Exploration (methods)
 
 *For high-res versions of images, go [here](https://github.com/rikudoukarthik/migration-timings-latitude/tree/d76f1d152a7d4a47c0dd823eeeef41757029d52a/02_explor_figs).*
+
+## Metrics
+
+- Migration timing:
+    - True arrival/departure dates, not absolute (stragglers)
+    - Synchronicity
+- Wintering latitude:
+    - Minimum
+    - Extent/breadth/range
+    - Median (probably not useful, other two capture enough info)
 
 ## Investigating arrival and departure timings & synchronicity
 
@@ -169,7 +171,7 @@ knitr::include_graphics("02_explor_figs/01_dep.png")
 
 ```
 
-We now calculate metrics for migration timings, such as first northern/southern arrival & departure, and synchronicity which is our primary metric of interest. We describe synchronicity using two (presumably) orthogonal angles: slope (quickness of migration) and tightness (uniformity) across latitudes. (Correlation R^2 cannot be used for the measure of tightness, since for high slope values, R2 becomes low.)
+We now calculate metrics for migration timings, such as first northern/southern arrival & departure, and synchronicity which is our primary metric of interest. We describe synchronicity using two (presumably) orthogonal angles: slope (quickness of migration) and tightness (uniformity) across latitudes. (Correlation R^2^ cannot be used for the measure of tightness, since for high slope values, R^2^ becomes low.)
 
 Here are the synchronicity measures (`SYNC.SLOPE` & `SYNC.TIGHT`) for a set of illustrative species, followed by updated plots for the same species.
 
@@ -298,7 +300,7 @@ So, changes applied:
 - Set threshold for variability (tightness) along slope, exclude species above this from our main regression tests with latitude
 - With all species (including those excluded above), we divide synchronicity into N bins (think X axis of Fig. \@ref(fig:sync-space)) and within each bin show how variability (signal) can range from low to high. e.g., highly staggered species can range from BRW (very strong migration signal) to CiVu (less strong signal); very synchronous species can range from BHGo to SpRedshank.
 - So now our measure of synchronicity is much simplified: there is only one metric, and that too can be simply the slope from the LM (*without* any transformations). 
-    - LM seems the best bet here; I did try GLM but the slope there is not the information we want
+    - LM seems the best bet here; I did try GLM Poisson but the slope there is not the information we want
     - Also, LM estimates with and without scaling the DAY.MY to start from 0 (for each species and arrival/departure combo) were the same, so leave it unscaled. *See below.*
     
 ```{r, cache=FALSE, message=FALSE}
@@ -444,6 +446,7 @@ testing_criteria <- data1 %>%
 
 testing_criteria %>% 
   filter(COMMON.NAME %in% illust_species) %>% 
+  arrange(DATE.TYPE, SLOPE) |> 
   print(n = 100)
   
 ```
